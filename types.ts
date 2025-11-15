@@ -7,8 +7,11 @@ export enum Role {
 export enum Page {
   Landing,
   Login,
+  StaffLogin,
+  Signup,
   Order,
   Dashboard,
+  OrderDetail,
 }
 
 export interface User {
@@ -19,10 +22,13 @@ export interface User {
 }
 
 export enum ServiceId {
-  Exam = 'exam',
-  Adaptation = 'adaptation',
-  Express = 'express',
-  Consulting = 'consulting',
+  QualifiedSearch = 'qualified_search',
+  DigitalCertificate = 'digital_certificate',
+  PreAnalysis = 'pre_analysis',
+  DocPreparation = 'doc_preparation',
+  ITBIRequest = 'itbi_request',
+  TechnicalReport = 'technical_report',
+  DevolutionaryNoteAnalysis = 'devolutionary_note_analysis',
 }
 
 export interface Service {
@@ -35,6 +41,7 @@ export interface Service {
 }
 
 export enum OrderStatus {
+  AwaitingQuote = 'AWAITING_QUOTE',
   Pending = 'PENDING',
   InProgress = 'IN_PROGRESS',
   Completed = 'COMPLETED',
@@ -45,6 +52,14 @@ export interface UploadedFile {
   name: string;
   size: number;
   type: string;
+}
+
+export interface Message {
+    id: string;
+    sender: User;
+    content: string;
+    createdAt: Date;
+    attachment?: UploadedFile;
 }
 
 export interface Order {
@@ -60,6 +75,20 @@ export interface Order {
   createdAt: Date;
   updatedAt: Date;
   report?: UploadedFile;
+  description: string;
+  messages: Message[];
+}
+
+export interface CardDetails {
+    number: string;
+    name: string;
+    expiry: string;
+    cvc: string;
+}
+
+export interface PixResponse {
+    qrCodeUrl: string;
+    pixCopyPaste: string;
 }
 
 export interface AuthContextType {
@@ -68,4 +97,10 @@ export interface AuthContextType {
   logout: () => void;
   page: Page;
   setPage: (page: Page) => void;
+  signupAndLogin: (name: string, email: string) => void;
+  orders: Order[];
+  selectedOrder: Order | null;
+  setSelectedOrder: (order: Order | null) => void;
+  updateOrder: (updatedOrder: Order) => void;
+  addOrder: (newOrderData: Omit<Order, 'id'>) => void;
 }

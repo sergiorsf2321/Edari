@@ -1,5 +1,6 @@
 {
   "name": "Edari - Análise Documental Imobiliária",
   "description": "Uma plataforma completa para exame documental e adequação registral imobiliária. Clientes podem se cadastrar, contratar serviços, enviar documentos e acompanhar o processo, enquanto administradores e analistas gerenciam os pedidos.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "icon": "https://i.ibb.co/DqFcLt4/LOGO.png"
 }

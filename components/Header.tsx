@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { Page } from '../types';
-import { HomeIcon, MenuIcon, XIcon } from './icons/Icons';
+import { MenuIcon, XIcon } from './icons/Icons';
+import { LOGO_URL } from '../assets';
 
 const Header: React.FC = () => {
     const { user, logout, setPage } = useAuth();
@@ -59,9 +60,8 @@ const Header: React.FC = () => {
         <nav className="bg-white shadow-md sticky top-0 z-50">
             <div className="max-w-7xl mx-auto px-6 py-4">
                 <div className="flex items-center justify-between">
-                    <button onClick={() => handleNavigation(Page.Landing)} className="flex items-center gap-2 cursor-pointer">
-                        <HomeIcon className="text-blue-600 h-8 w-8" />
-                        <span className="text-2xl font-bold text-blue-900">EDARI</span>
+                    <button onClick={() => handleNavigation(Page.Landing)} className="flex items-center gap-2 cursor-pointer logo-sheen">
+                        <img src={LOGO_URL} alt="EDARI Logo" className="h-10 w-auto" />
                     </button>
                     
                     <div className="hidden md:flex items-center gap-8">

@@ -1,12 +1,13 @@
 import React from 'react';
 import { MailIcon, PhoneIcon, MapPinIcon } from './icons/Icons';
+import { LOGO_URL } from '../assets';
 
 const Footer: React.FC = () => {
     return (
       <footer className="bg-gray-900 text-white py-12 px-6">
         <div className="max-w-6xl mx-auto grid md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-xl font-bold mb-4">EDARI</h3>
+            <img src={LOGO_URL} alt="EDARI Logo" className="h-10 w-auto filter brightness-0 invert mb-4" />
             <p className="text-gray-400 mb-4">
               Exame Documental e Adequação Registral Imobiliária
             </p>

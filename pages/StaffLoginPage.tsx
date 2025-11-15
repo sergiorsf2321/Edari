@@ -3,10 +3,11 @@ import { useAuth } from '../App';
 import { Role, Page } from '../types';
 import { MOCK_USERS } from '../constants';
 
-const LoginPage: React.FC = () => {
+const StaffLoginPage: React.FC = () => {
     // Login form states
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [role, setRole] = useState<Role>(Role.Analyst);
     const { login, setPage } = useAuth();
 
     // Forgot password states
@@ -16,19 +17,16 @@ const LoginPage: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        login(email, Role.Client);
+        login(email, role);
     };
     
     const handleForgotPassword = (e: React.FormEvent) => {
         e.preventDefault();
-        // In a real app, this would trigger an API call.
-        // We show a confirmation message regardless of whether the email exists
-        // to prevent account enumeration.
         console.log(`Password reset requested for: ${forgotEmail}`);
         setResetEmailSent(true);
     };
 
-    const exampleEmails = MOCK_USERS.filter(u => u.role === Role.Client).map(u => u.email).join(', ');
+    const exampleEmails = MOCK_USERS.filter(u => u.role === role).map(u => u.email).join(', ');
 
     return (
         <div className="bg-brand-light py-12 sm:py-24">
@@ -83,10 +81,25 @@ const LoginPage: React.FC = () => {
                     </div>
                 ) : (
                     <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
-                        <h2 className="text-3xl font-bold text-center text-brand-primary mb-2">Área do Cliente</h2>
-                        <p className="text-center text-slate-500 mb-8">Bem-vindo(a) de volta!</p>
+                        <h2 className="text-3xl font-bold text-center text-brand-primary mb-2">Acesso Restrito</h2>
+                        <p className="text-center text-slate-500 mb-8">Login para colaboradores.</p>
                         
                         <form onSubmit={handleSubmit}>
+                            <div className="mb-6">
+                                <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-2">Acessar como:</label>
+                                <select
+                                    id="role"
+                                    value={role}
+                                    onChange={(e) => {
+                                        setRole(e.target.value as Role);
+                                        setEmail(''); // Reset email when role changes
+                                    }}
+                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900"
+                                >
+                                    <option value={Role.Analyst}>Analista</option>
+                                    <option value={Role.Admin}>Administrador</option>
+                                </select>
+                            </div>
                             <div className="mb-4">
                                 <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">Email</label>
                                 <input
@@ -131,22 +144,13 @@ const LoginPage: React.FC = () => {
                                 Entrar
                             </button>
                         </form>
-                        <p className="text-center text-sm text-slate-600 mt-8">
-                            Não tem uma conta?{' '}
+                        <p className="text-center text-xs text-slate-500 mt-6 pt-4 border-t">
+                            Não é um colaborador?{' '}
                             <button 
-                                onClick={() => setPage(Page.Signup)} 
+                                onClick={() => setPage(Page.Login)} 
                                 className="font-semibold text-brand-secondary hover:underline"
                             >
-                                Cadastre-se
-                            </button>
-                        </p>
-                         <p className="text-center text-xs text-slate-500 mt-6 pt-4 border-t">
-                            Acesso para colaboradores?{' '}
-                            <button 
-                                onClick={() => setPage(Page.StaffLogin)} 
-                                className="font-semibold text-brand-secondary hover:underline"
-                            >
-                                Entrar aqui
+                                Acessar como cliente
                             </button>
                         </p>
                     </div>
@@ -156,4 +160,4 @@ const LoginPage: React.FC = () => {
     );
 };
 
-export default LoginPage;
+export default StaffLoginPage;
