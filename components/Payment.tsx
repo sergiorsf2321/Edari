@@ -48,6 +48,28 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
             setIsLoading(false);
         }
     };
+
+    const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/\D/g, '');
+        const formattedValue = value.match(/.{1,4}/g)?.join(' ').slice(0, 19) || '';
+        setCardDetails(prev => ({ ...prev, number: formattedValue }));
+    };
+
+    const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/\D/g, '');
+        let formattedValue = value;
+        if (value.length > 2) {
+            formattedValue = `${value.slice(0, 2)}/${value.slice(2, 4)}`;
+        }
+        setCardDetails(prev => ({ ...prev, expiry: formattedValue }));
+    };
+
+    const handleCvcChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 4) {
+            setCardDetails(prev => ({ ...prev, cvc: value }));
+        }
+    };
     
     const paymentOptions = [ { id: 'CARD', label: 'Cartão de Crédito' }, { id: 'PIX', label: 'PIX' }];
 
@@ -72,20 +94,41 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
                         <div className="space-y-4">
                             <div>
                                 <label className="text-sm font-medium text-slate-700">Nome no Cartão</label>
-                                <input type="text" value={cardDetails.name} onChange={e => setCardDetails(prev => ({ ...prev, name: e.target.value }))} className="w-full p-2 border rounded-lg mt-1" required />
+                                <input type="text" value={cardDetails.name} onChange={e => setCardDetails(prev => ({ ...prev, name: e.target.value }))} className="w-full p-2 border rounded-lg mt-1 bg-white" required />
                             </div>
                             <div>
                                 <label className="text-sm font-medium text-slate-700">Número do Cartão</label>
-                                <input type="text" placeholder="0000 0000 0000 0000" value={cardDetails.number} onChange={e => setCardDetails(prev => ({ ...prev, number: e.target.value }))} className="w-full p-2 border rounded-lg mt-1" required />
+                                <input 
+                                    type="text" 
+                                    placeholder="0000 0000 0000 0000" 
+                                    value={cardDetails.number} 
+                                    onChange={handleCardNumberChange} 
+                                    className="w-full p-2 border rounded-lg mt-1 bg-white" 
+                                    maxLength={19}
+                                    required />
                             </div>
                             <div className="flex gap-4">
                                 <div className="flex-1">
                                     <label className="text-sm font-medium text-slate-700">Validade</label>
-                                    <input type="text" placeholder="MM/AA" value={cardDetails.expiry} onChange={e => setCardDetails(prev => ({ ...prev, expiry: e.target.value }))} className="w-full p-2 border rounded-lg mt-1" required />
+                                    <input 
+                                        type="text" 
+                                        placeholder="MM/AA" 
+                                        value={cardDetails.expiry} 
+                                        onChange={handleExpiryChange} 
+                                        className="w-full p-2 border rounded-lg mt-1 bg-white" 
+                                        maxLength={5}
+                                        required />
                                 </div>
                                 <div className="flex-1">
                                     <label className="text-sm font-medium text-slate-700">CVC</label>
-                                    <input type="text" placeholder="123" value={cardDetails.cvc} onChange={e => setCardDetails(prev => ({ ...prev, cvc: e.target.value }))} className="w-full p-2 border rounded-lg mt-1" required />
+                                    <input 
+                                        type="text" 
+                                        placeholder="123" 
+                                        value={cardDetails.cvc} 
+                                        onChange={handleCvcChange} 
+                                        className="w-full p-2 border rounded-lg mt-1 bg-white" 
+                                        maxLength={4}
+                                        required />
                                 </div>
                             </div>
                             <div>

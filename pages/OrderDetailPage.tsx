@@ -2,17 +2,20 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../App';
 import { Page, Role, OrderStatus, User, Message, UploadedFile } from '../types';
 import { MOCK_USERS } from '../constants';
-import { DownloadIcon, FileIcon, PaperclipIcon, SendIcon } from '../components/icons/Icons';
+import { DownloadIcon, FileIcon, PaperclipIcon, SendIcon, TrashIcon } from '../components/icons/Icons';
 import StatusBadge from '../components/StatusBadge';
 import Payment from '../components/Payment';
 
 const OrderDetailPage: React.FC = () => {
     const { user, selectedOrder, updateOrder, setPage, setSelectedOrder } = useAuth();
     const [newMessage, setNewMessage] = useState('');
+    const [attachment, setAttachment] = useState<UploadedFile | null>(null);
     const [quoteValue, setQuoteValue] = useState<number | string>('');
     const [showPaymentForm, setShowPaymentForm] = useState(false);
     
     const chatEndRef = useRef<HTMLDivElement>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [selectedOrder?.messages]);
@@ -29,10 +32,29 @@ const OrderDetailPage: React.FC = () => {
     const analysts = MOCK_USERS.filter(u => u.role === Role.Analyst);
 
     const handleSendMessage = () => {
-        if (newMessage.trim() === '') return;
-        const message: Message = { id: `msg-${Date.now()}`, sender: user, content: newMessage, createdAt: new Date() };
-        updateOrder({ ...selectedOrder, messages: [...selectedOrder.messages, message], updatedAt: new Date() });
+        if (newMessage.trim() === '' && !attachment) return;
+
+        const message: Message = { 
+            id: `msg-${Date.now()}`, 
+            sender: user, 
+            content: newMessage, 
+            createdAt: new Date(),
+            attachment: attachment || undefined,
+        };
+
+        const updatedDocuments = attachment 
+            ? [...selectedOrder.documents, attachment] 
+            : selectedOrder.documents;
+
+        updateOrder({ 
+            ...selectedOrder, 
+            messages: [...selectedOrder.messages, message], 
+            documents: updatedDocuments,
+            updatedAt: new Date() 
+        });
+
         setNewMessage('');
+        setAttachment(null);
     };
 
     const handleAssignAnalyst = (analystId: string) => {
@@ -41,11 +63,21 @@ const OrderDetailPage: React.FC = () => {
         updateOrder({ ...selectedOrder, analyst, status: OrderStatus.InProgress, updatedAt: new Date() });
     };
     
-    const handleUploadReport = () => {
-        const reportFile: UploadedFile = { name: 'relatorio_final.pdf', size: 1024 * 350, type: 'application/pdf' };
-        const message: Message = { id: `msg-${Date.now()}`, sender: user, content: 'O relatório final está pronto para download.', createdAt: new Date(), attachment: reportFile };
-        updateOrder({ ...selectedOrder, messages: [...selectedOrder.messages, message], report: reportFile, status: OrderStatus.Completed, updatedAt: new Date() });
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        if (event.target.files && event.target.files[0]) {
+            const file = event.target.files[0];
+            setAttachment({
+                name: file.name,
+                size: file.size,
+                type: file.type,
+            });
+        }
     };
+    
+    const handleAttachmentClick = () => {
+        fileInputRef.current?.click();
+    };
+
 
     const handleSendQuote = () => {
         const value = parseFloat(String(quoteValue));
@@ -239,6 +271,21 @@ const OrderDetailPage: React.FC = () => {
                         </div>
                         <div className="mt-auto p-6 border-t">
                             {selectedOrder.status !== OrderStatus.Completed && selectedOrder.status !== OrderStatus.Canceled && (
+                                <>
+                                {attachment && (
+                                    <div className="mb-2 flex items-center justify-between bg-slate-100 p-2 rounded-lg">
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            <FileIcon className="h-5 w-5 text-brand-primary flex-shrink-0" />
+                                            <div className="min-w-0">
+                                                <p className="font-medium text-xs truncate" title={attachment.name}>{attachment.name}</p>
+                                                <p className="text-xs text-slate-500">{(attachment.size / 1024).toFixed(1)} KB</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setAttachment(null)} className="text-red-500 hover:text-red-700 ml-2">
+                                            <TrashIcon className="h-4 w-4"/>
+                                        </button>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-3">
                                     <textarea
                                         value={newMessage}
@@ -248,15 +295,15 @@ const OrderDetailPage: React.FC = () => {
                                         className="w-full p-2 border rounded-lg bg-white text-slate-900 resize-none"
                                         rows={1}
                                     />
-                                    {user.role === Role.Analyst && (
-                                        <button onClick={handleUploadReport} className="p-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300" title="Anexar Relatório Final (.pdf)">
-                                            <PaperclipIcon className="h-6 w-6"/>
-                                        </button>
-                                    )}
+                                    <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
+                                    <button onClick={handleAttachmentClick} className="p-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300" title="Anexar Documento">
+                                        <PaperclipIcon className="h-6 w-6"/>
+                                    </button>
                                     <button onClick={handleSendMessage} className="p-3 bg-brand-accent text-white rounded-lg hover:opacity-90">
                                         <SendIcon className="h-6 w-6"/>
                                     </button>
                                 </div>
+                                </>
                             )}
                             {selectedOrder.status === OrderStatus.Completed && (
                                 <p className="text-center text-sm text-slate-500 font-medium">Este pedido foi concluído. A comunicação está encerrada.</p>

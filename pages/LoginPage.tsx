@@ -1,156 +1,107 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../App';
-import { Role, Page } from '../types';
-import { MOCK_USERS } from '../constants';
+import { Page, Role } from '../types';
+
+// Declaração para a biblioteca global do Google
+declare global {
+  const google: any;
+}
 
 const LoginPage: React.FC = () => {
-    // Login form states
+    const { login, loginWithGoogle, setPage } = useAuth();
+    const googleButtonRef = useRef<HTMLDivElement>(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const { login, setPage } = useAuth();
 
-    // Forgot password states
-    const [isForgotPassword, setIsForgotPassword] = useState(false);
-    const [forgotEmail, setForgotEmail] = useState('');
-    const [resetEmailSent, setResetEmailSent] = useState(false);
-
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleEmailLogin = (e: React.FormEvent) => {
         e.preventDefault();
         login(email, Role.Client);
     };
-    
-    const handleForgotPassword = (e: React.FormEvent) => {
-        e.preventDefault();
-        // In a real app, this would trigger an API call.
-        // We show a confirmation message regardless of whether the email exists
-        // to prevent account enumeration.
-        console.log(`Password reset requested for: ${forgotEmail}`);
-        setResetEmailSent(true);
+
+    const handleGoogleSignIn = (response: any) => {
+        // 'response.credential' é o ID Token (JWT) que o Google retorna
+        loginWithGoogle(response.credential);
     };
 
-    const exampleEmails = MOCK_USERS.filter(u => u.role === Role.Client).map(u => u.email).join(', ');
+    useEffect(() => {
+        if (typeof google === 'undefined') {
+            console.error("Google Identity Services script not loaded.");
+            return;
+        }
+
+        google.accounts.id.initialize({
+            // =======================================================================
+            // ATENÇÃO: O erro "401: invalid_client" ocorre porque o ID abaixo
+            // é um placeholder. Você PRECISA substituí-lo pelo seu Client ID real,
+            // obtido no Google Cloud Console em "APIs & Services > Credentials".
+            // Além disso, certifique-se de que o domínio em que você está
+            // rodando a aplicação (ex: http://localhost:3000) está listado nos
+            // "Authorized JavaScript origins".
+            // =======================================================================
+            client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+            callback: handleGoogleSignIn
+        });
+
+        if (googleButtonRef.current) {
+            google.accounts.id.renderButton(
+                googleButtonRef.current,
+                { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
+            );
+        }
+
+    }, [loginWithGoogle]);
 
     return (
         <div className="bg-brand-light py-12 sm:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
-                {isForgotPassword ? (
-                    <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
-                        <h2 className="text-3xl font-bold text-center text-brand-primary mb-2">Recuperar Senha</h2>
-                        {resetEmailSent ? (
-                             <div>
-                                <p className="text-center text-slate-500 my-8">Se houver uma conta para <strong>{forgotEmail}</strong>, você receberá um email com as instruções de redefinição.</p>
-                                <button 
-                                    onClick={() => { setIsForgotPassword(false); setResetEmailSent(false); setForgotEmail(''); }} 
-                                    className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
-                                >
-                                    Voltar para Login
-                                </button>
-                            </div>
-                        ) : (
-                            <>
-                                <p className="text-center text-slate-500 mb-8">Digite seu e-mail para continuar.</p>
-                                <form onSubmit={handleForgotPassword}>
-                                    <div className="mb-6">
-                                        <label htmlFor="forgot-email" className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                                        <input
-                                            type="email"
-                                            id="forgot-email"
-                                            value={forgotEmail}
-                                            onChange={(e) => setForgotEmail(e.target.value)}
-                                            className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900"
-                                            placeholder="seu@email.com"
-                                            required
-                                        />
-                                    </div>
-                                    <button
-                                        type="submit"
-                                        className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
-                                    >
-                                        Enviar Link de Recuperação
-                                    </button>
-                                </form>
-                                <p className="text-center text-sm text-slate-600 mt-8">
-                                    Lembrou a senha?{' '}
-                                    <button 
-                                        onClick={() => setIsForgotPassword(false)} 
-                                        className="font-semibold text-brand-secondary hover:underline"
-                                    >
-                                        Voltar para o Login
-                                    </button>
-                                </p>
-                            </>
-                        )}
+                <div className="w-full max-w-sm bg-white p-8 rounded-xl shadow-lg">
+                    <h2 className="text-3xl font-bold text-center text-brand-primary mb-2">Área do Cliente</h2>
+                    <p className="text-center text-slate-500 mb-8">Acesse para gerenciar seus pedidos.</p>
+                    
+                    <form onSubmit={handleEmailLogin} className="space-y-4">
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium mb-1 text-slate-700">Email</label>
+                            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required />
+                        </div>
+                        <div>
+                            <label htmlFor="password"className="block text-sm font-medium mb-1 text-slate-700">Senha</label>
+                            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" placeholder="Qualquer senha funciona" required />
+                        </div>
+                        <button type="submit" className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity">
+                            Entrar
+                        </button>
+                    </form>
+                    
+                     <div className="my-6 flex items-center">
+                        <div className="flex-grow border-t border-slate-300"></div>
+                        <span className="flex-shrink mx-4 text-slate-400 text-sm">ou</span>
+                        <div className="flex-grow border-t border-slate-300"></div>
                     </div>
-                ) : (
-                    <div className="w-full max-w-md bg-white p-8 rounded-xl shadow-lg">
-                        <h2 className="text-3xl font-bold text-center text-brand-primary mb-2">Área do Cliente</h2>
-                        <p className="text-center text-slate-500 mb-8">Bem-vindo(a) de volta!</p>
-                        
-                        <form onSubmit={handleSubmit}>
-                            <div className="mb-4">
-                                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                                <input
-                                    type="email"
-                                    id="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900"
-                                    placeholder="seu@email.com"
-                                    required
-                                />
-                                <p className="text-xs text-slate-500 mt-2">
-                                    Ex: {exampleEmails}
-                                </p>
-                            </div>
-                            <div className="mb-4">
-                                <label htmlFor="password"className="block text-sm font-medium text-slate-700 mb-2">Senha</label>
-                                <input
-                                    type="password"
-                                    id="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900"
-                                    placeholder="Qualquer senha funciona"
-                                />
-                            </div>
 
-                            <div className="flex items-center justify-end mb-6">
-                            <button
-                                    type="button"
-                                    onClick={() => setIsForgotPassword(true)}
-                                    className="text-sm text-brand-secondary hover:underline focus:outline-none"
-                                >
-                                    Esqueci minha senha
-                                </button>
-                            </div>
-
-                            <button
-                                type="submit"
-                                className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
-                            >
-                                Entrar
-                            </button>
-                        </form>
-                        <p className="text-center text-sm text-slate-600 mt-8">
-                            Não tem uma conta?{' '}
-                            <button 
-                                onClick={() => setPage(Page.Signup)} 
-                                className="font-semibold text-brand-secondary hover:underline"
-                            >
-                                Cadastre-se
-                            </button>
-                        </p>
-                         <p className="text-center text-xs text-slate-500 mt-6 pt-4 border-t">
-                            Acesso para colaboradores?{' '}
-                            <button 
-                                onClick={() => setPage(Page.StaffLogin)} 
-                                className="font-semibold text-brand-secondary hover:underline"
-                            >
-                                Entrar aqui
-                            </button>
-                        </p>
+                    <div className="flex justify-center">
+                        <div ref={googleButtonRef}></div>
                     </div>
-                )}
+                    
+                    <p className="text-center text-sm text-slate-600 mt-8">
+                        Não tem uma conta?{' '}
+                        <button 
+                            onClick={() => setPage(Page.Signup)} 
+                            className="font-semibold text-brand-secondary hover:underline"
+                        >
+                            Crie agora
+                        </button>
+                    </p>
+
+                    <p className="text-center text-xs text-slate-500 mt-6 pt-4 border-t">
+                        Acesso para colaboradores?{' '}
+                        <button 
+                            onClick={() => setPage(Page.StaffLogin)} 
+                            className="font-semibold text-brand-secondary hover:underline"
+                        >
+                            Entrar aqui
+                        </button>
+                    </p>
+                </div>
             </div>
         </div>
     );

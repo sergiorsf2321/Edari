@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { Page } from '../types';
-import { MenuIcon, XIcon } from './icons/Icons';
+import { MenuIcon, XIcon, UserCircleIcon } from './icons/Icons';
 import { LOGO_URL } from '../assets';
 
 const Header: React.FC = () => {
@@ -36,7 +36,11 @@ const Header: React.FC = () => {
         <>
         {user ? (
             <div className="flex items-center gap-4">
-                <span className="text-gray-700 hidden sm:inline">Olá, {user.name.split(' ')[0]}!</span>
+                {user.picture ? (
+                    <img src={user.picture} alt={`Foto de ${user.name}`} className="h-9 w-9 rounded-full" />
+                ) : (
+                    <span className="text-gray-700 hidden sm:inline">Olá, {user.name.split(' ')[0]}!</span>
+                )}
                 <button 
                     onClick={() => handleNavigation(Page.Dashboard)}
                     className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition font-medium"

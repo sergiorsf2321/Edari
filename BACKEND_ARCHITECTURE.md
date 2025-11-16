@@ -1,108 +1,111 @@
-# Projeto Arquitetônico do Backend da EDARI
+# Projeto Arquitetônico do Backend da EDARI (Versão 2.0)
 
-Este documento serve como um guia completo para construir um backend moderno, seguro e escalável, pronto para ser conectado ao frontend que já foi desenvolvido para a plataforma EDARI.
+Este documento é o guia definitivo para a construção de um backend moderno, seguro e escalável para a plataforma EDARI, garantindo uma integração perfeita com o frontend existente.
 
 ## 1. Tecnologias Recomendadas (O "Stack")
 
-Para máxima produtividade e compatibilidade com o ecossistema moderno, a seguinte stack de tecnologia é recomendada:
+-   **Linguagem:** **TypeScript**.
+-   **Ambiente de Execução:** **Node.js**.
+-   **Framework:** **Express.js**.
+-   **Banco de Dados:** **PostgreSQL**.
+-   **ORM (Mapeamento Objeto-Relacional):** **Prisma**.
 
--   **Linguagem:** **TypeScript**. Garante segurança de tipos, o que reduz bugs e facilita a manutenção do código a longo prazo.
--   **Ambiente de Execução:** **Node.js**. Rápido, eficiente e permite o uso da mesma linguagem do frontend (JavaScript/TypeScript), unificando o conhecimento necessário.
--   **Framework:** **Express.js**. Simples, flexível, poderoso e o padrão de mercado para criar APIs em Node.js.
--   **Banco de Dados:** **PostgreSQL**. Um sistema de banco de dados relacional robusto, confiável e excelente para dados estruturados como os da EDARI (pedidos, usuários, mensagens, etc.).
--   **ORM (Mapeamento Objeto-Relacional):** **Prisma**. Facilita drasticamente a comunicação com o banco de dados, gera tipos TypeScript automaticamente a partir do schema e previne erros comuns de SQL, aumentando a segurança e a velocidade de desenvolvimento.
+## 2. Hospedagem e Banco de Dados com Vercel
 
-## 2. Estrutura de Pastas do Projeto
+A Vercel, ideal para o frontend, também pode hospedar o backend e o banco de dados através dos seus serviços integrados.
 
-Uma boa organização é fundamental para a manutenibilidade do projeto. A estrutura abaixo é recomendada:
+**Guia Rápido para Vercel Postgres:**
 
-```plaintext
-/edari-backend
-|
-├── prisma/
-|   └── schema.prisma      # Definição das tabelas do banco de dados (o "Schema")
-|
-├── src/
-|   ├── api/
-|   |   ├── auth/          # Rotas e controllers de autenticação (login, registro)
-|   |   ├── orders/        # Rotas e controllers de pedidos (criar, listar, detalhar)
-|   |   └── payments/      # Rotas e controllers de pagamentos (gerar PIX, webhook)
-|   |
-|   ├── services/
-|   |   ├── auth.service.ts    # Lógica de negócio para usuários e autenticação
-|   |   ├── order.service.ts   # Lógica de negócio para pedidos e status
-|   |   └── payment.service.ts # Lógica para integrar com a API do Mercado Pago
-|   |
-|   ├── middlewares/
-|   |   └── auth.middleware.ts # Middleware para verificar se o usuário está logado (JWT)
-|   |
-|   └── server.ts            # Ponto de entrada da aplicação (configuração do Express)
-|
-├── .env                     # Arquivo para variáveis de ambiente e segredos (NÃO ENVIAR PARA O GITHUB)
-├── .gitignore               # Arquivo para ignorar pastas como node_modules e .env
-├── package.json
-└── tsconfig.json
-```
+1.  **Criação do Banco:** No dashboard do seu projeto Vercel, vá para a aba **Storage**.
+2.  Clique em **Create Database** e selecione **Postgres**. Siga as instruções para criar sua instância.
+3.  **Variáveis de Ambiente:** A Vercel automaticamente disponibilizará as variáveis de conexão (como `POSTGRES_URL`, `POSTGRES_PRISMA_URL`) para o seu projeto. Você só precisa garantir que o seu `schema.prisma` as utilize.
+4.  **Configuração do Schema:** Em `prisma/schema.prisma`, na seção `datasource`, certifique-se de que a URL é lida do ambiente:
+    ```prisma
+    datasource db {
+      provider = "postgresql"
+      url      = env("POSTGRES_PRISMA_URL") // Use a variável específica para Prisma fornecida pela Vercel
+    }
+    ```
+5.  **Migrations (Atualizações do Banco):** Para aplicar suas mudanças de schema em produção, modifique o comando de `build` no seu `package.json`:
+    ```json
+    "scripts": {
+      "build": "npx prisma migrate deploy && next build" // Exemplo para Next.js, adapte para seu build
+    }
+    ```
+    Isso garante que, a cada deploy, o banco de dados seja atualizado para corresponder ao seu `schema.prisma`.
 
-## 3. Guia de Implementação
+## 3. Schema Completo do Banco de Dados (`prisma/schema.prisma`)
 
-### Passo A: Definição do Banco de Dados (`prisma/schema.prisma`)
-
-O Prisma utiliza um arquivo de schema para definir todo o banco de dados. Este schema é uma tradução direta dos tipos que já temos no frontend (`types.ts`).
+Este schema foi atualizado para corresponder a todas as estruturas de dados utilizadas no frontend.
 
 ```prisma
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("POSTGRES_PRISMA_URL")
 }
 
 model User {
-  id       String  @id @default(cuid())
-  email    String  @unique
-  name     String
-  password String // A senha será armazenada de forma criptografada (hash)
-  role     Role    @default(CLIENT)
-  orders   Order[] @relation("ClientOrders")
-  assignedOrders Order[] @relation("AnalystOrders")
-  messages Message[]
+  id             String    @id @default(cuid())
+  email          String    @unique
+  name           String
+  password       String?
+  picture        String?
+  role           Role      @default(CLIENT)
+  orders         Order[]   @relation("ClientOrders")
+  assignedOrders Order[]   @relation("AnalystOrders")
+  messages       Message[]
+}
+
+model Service {
+  id          String   @id @default(cuid())
+  serviceId   String   @unique // Corresponde ao ServiceId do frontend, ex: 'qualified_search'
+  name        String
+  description String
+  price       Float?
+  duration    String
+  features    Json
+  orders      Order[]
 }
 
 model Order {
-  id          String      @id @default(cuid())
-  serviceName String
-  description String
-  status      OrderStatus @default(AWAITING_QUOTE)
-  total       Float       @default(0)
-  documents   Json?       // Para armazenar uma lista de URLs de documentos
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id           String      @id @default(cuid())
+  description  String
+  status       OrderStatus @default(AWAITING_QUOTE)
+  total        Float       @default(0)
+  isUrgent     Boolean     @default(false)
+  propertyType String?
+  documents    Json[]      // Lista de objetos de documentos {name, url, size, type}
+  report       Json?       // Objeto do relatório final
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
   
-  client      User        @relation("ClientOrders", fields: [clientId], references: [id])
-  clientId    String
+  client       User        @relation("ClientOrders", fields: [clientId], references: [id])
+  clientId     String
 
-  analyst     User?       @relation("AnalystOrders", fields: [analystId], references: [id])
-  analystId   String?
+  analyst      User?       @relation("AnalystOrders", fields: [analystId], references: [id])
+  analystId    String?
   
-  messages    Message[]
+  service      Service     @relation(fields: [serviceId], references: [id])
+  serviceId    String
+
+  messages     Message[]
 }
 
 model Message {
-  id        String   @id @default(cuid())
-  content   String
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  content    String
+  createdAt  DateTime @default(now())
+  attachment Json?    // Objeto do anexo {name, url, size, type}
   
-  order     Order    @relation(fields: [orderId], references: [id])
-  orderId   String
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    String
 
-  sender    User     @relation(fields: [senderId], references: [id])
-  senderId  String
+  sender     User     @relation(fields: [senderId], references: [id])
+  senderId   String
 }
 
 enum Role {
@@ -120,44 +123,115 @@ enum OrderStatus {
 }
 ```
 
-### Passo B: Criação dos Endpoints da API
+## 4. Guia Detalhado dos Endpoints da API
 
-O frontend precisará "conversar" com o backend. Faremos isso através de endpoints REST.
+### Autenticação (`/api/auth`)
 
--   **Autenticação (`/api/auth`)**
-    -   `POST /register`: Cria um novo cliente. Recebe `name`, `email`, `password`.
-    -   `POST /login`: Autentifica um usuário. Recebe `email`, `password`. Retorna um token de segurança (JWT).
+-   `POST /register`: Cria um novo cliente com email/senha. Usa `bcrypt` para hash da senha.
+-   `POST /login`: Autentica um usuário (cliente ou colaborador). Retorna um JWT.
+-   `POST /google-signin`:
+    -   **Recebe:** `{ "googleToken": "..." }`
+    -   **Processo:**
+        1.  Usa `google-auth-library` para verificar o token.
+        2.  Busca o usuário pelo email. Se não existir, cria um novo com `role: CLIENT`.
+        3.  Gera um JWT da **nossa aplicação** para o usuário.
+    -   **Retorna:** `{ "appToken": "NOSSO_JWT_SEGURO", "user": { ... } }`
 
--   **Pedidos (`/api/orders`)**
-    -   `POST /`: Cliente cria um novo pedido. Recebe `serviceId`, `description`, `files`. Requer autenticação.
-    -   `GET /`: Lista os pedidos. Clientes veem só os seus, Admins/Analistas veem os relevantes. Requer autenticação.
-    -   `GET /:id`: Busca os detalhes de um pedido específico. Requer autenticação e permissão.
-    -   `POST /:id/messages`: Envia uma mensagem em um pedido. Requer autenticação.
-    -   `PUT /:id/assign`: Admin atribui um analista. Recebe `analystId`. Requer autenticação de Admin.
-    -   `POST /:id/quote`: Admin envia um orçamento. Recebe `total`. Requer autenticação de Admin.
+### Serviços (`/api/services`)
 
--   **Pagamentos (`/api/payments`)**
-    -   `POST /create-pix`: Gera um PIX para um pedido. Recebe `orderId`. Requer autenticação.
-    -   `POST /webhook/mercado-pago`: Endpoint **público** que o Mercado Pago usará para notificar que um pagamento foi confirmado.
+-   `GET /`: Lista todos os serviços disponíveis (para a página de contratação).
 
-### Passo C: Lógica de Segurança e Integrações
+### Pedidos (`/api/orders`)
 
--   **Senhas:** **Nunca** salve senhas em texto puro. Use uma biblioteca como `bcrypt` para criptografá-las antes de salvar no banco.
--   **Autenticação:** Use **JWT (JSON Web Tokens)**. Após o login, o backend gera um token que o frontend envia em cada requisição para provar que o usuário está logado. O `auth.middleware.ts` irá verificar a validade desse token antes de permitir o acesso a rotas protegidas.
--   **Integração com Mercado Pago:** No backend, instale o SDK oficial do Mercado Pago. As chaves de API (`ACCESS_TOKEN`) devem ficar no arquivo `.env`. O backend fará as chamadas seguras para a API do Mercado Pago.
--   **Upload de Arquivos:** Para os documentos, a melhor prática é não salvá-los no servidor do backend. Use um serviço de armazenamento de objetos em nuvem como **Amazon S3**, **Google Cloud Storage** ou **Cloudinary**. O backend receberá o arquivo do frontend e o enviará de forma segura para um desses serviços, salvando apenas o link de acesso no banco de dados.
+-   `POST /`: Cliente cria um novo pedido. Requer JWT.
+-   `GET /`: Lista pedidos com base no JWT do usuário (cliente vê os seus, analista os atribuídos, admin todos).
+-   `GET /:id`: Detalhes de um pedido. Verifica a permissão do usuário.
+-   `POST /:id/messages`: Envia uma mensagem.
+-   `PUT /:id/assign`: Admin atribui um analista.
+-   `POST /:id/quote`: Admin envia um orçamento.
+-   `PUT /:id/status`: Muda o status do pedido (ex: para `CANCELED`).
 
-## 4. Como Hospedar (Deploy)
+## 5. Guia Passo a Passo: Integração de Pagamentos
 
-Para colocar o backend online:
+A integração será feita com o **Mercado Pago**, priorizando a segurança (sem tocar em dados de cartão).
 
-1.  **Crie o Repositório no GitHub:** Inicie um novo repositório e envie o código do backend para ele.
-2.  **Escolha uma Plataforma:** Recomendo a **Render.com**. Ela possui planos gratuitos generosos, é muito fácil de usar e suporta Node.js e PostgreSQL nativamente. Alternativas são Heroku ou Vercel.
-3.  **Configure na Plataforma (Ex: Render):**
-    -   **Crie um Banco de Dados:** Na Render, crie um novo serviço "PostgreSQL". Ela fornecerá uma URL de conexão (`DATABASE_URL`).
-    -   **Crie o Serviço Web:** Crie um novo "Web Service" e conecte-o ao seu repositório do GitHub.
-    -   **Configure o Ambiente:**
-        -   **Comando de Build:** `npm install && npx prisma generate`
-        -   **Comando de Início:** `npm start`
-        -   **Variáveis de Ambiente:** Copie todas as variáveis do seu arquivo `.env` (como `DATABASE_URL`, `JWT_SECRET`, `MERCADO_PAGO_ACCESS_TOKEN`) para a seção "Environment" na Render.
-4.  **Deploy Automático:** A Render irá automaticamente baixar seu código do GitHub, instalar as dependências, construir o projeto e colocá-lo no ar. A cada novo `git push` para a branch principal, ela fará o deploy da nova versão automaticamente.
+**Passo 1: Configuração**
+-   Obtenha seu `ACCESS_TOKEN` do Mercado Pago e adicione-o às variáveis de ambiente (`MERCADO_PAGO_ACCESS_TOKEN`).
+-   Instale o SDK oficial: `npm install mercadopago`.
+
+**Passo 2: Geração de PIX (`POST /api/payments/pix`)**
+
+1.  **Endpoint recebe:** `{ "orderId": "..." }`.
+2.  **Backend:**
+    -   Verifica se o usuário logado é o dono do pedido.
+    -   Busca o valor (`total`) do pedido no banco.
+    -   Usa o SDK do Mercado Pago para criar a intenção de pagamento.
+    ```typescript
+    // Exemplo de código no backend
+    import mercadopago from 'mercadopago';
+    
+    mercadopago.configure({ access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN! });
+    
+    const response = await mercadopago.payment.create({
+      transaction_amount: order.total,
+      description: order.service.name,
+      payment_method_id: 'pix',
+      payer: { email: user.email, /* ... */ }
+    });
+    
+    const qrCodeBase64 = response.body.point_of_interaction.transaction_data.qr_code_base64;
+    const pixCopyPaste = response.body.point_of_interaction.transaction_data.qr_code;
+    ```
+3.  **Backend retorna:** `{ qrCodeUrl, pixCopyPaste }` para o frontend.
+
+**Passo 3: Pagamento com Cartão de Crédito (`POST /api/payments/card`)**
+
+1.  **Frontend:** Usa o SDK `MercadoPago.js V2` no navegador para coletar os dados do cartão e gerar um `cardToken` seguro. **Este é o passo mais importante para a segurança PCI.**
+2.  **Endpoint recebe:** `{ "orderId": "...", "token": "CARD_TOKEN_GERADO", "installments": 1, "payment_method_id": "visa", ... }`.
+3.  **Backend:**
+    -   Verifica a posse do pedido.
+    -   Usa o SDK para processar o pagamento usando o `token`. **NUNCA os dados do cartão.**
+    ```typescript
+    const paymentResponse = await mercadopago.payment.create({
+      transaction_amount: order.total,
+      token: req.body.token,
+      installments: req.body.installments,
+      // ... outros dados
+    });
+    ```
+4.  Se o `paymentResponse.body.status` for `approved`, o backend atualiza o status do pedido no banco para `IN_PROGRESS` e retorna sucesso ao frontend.
+
+**Passo 4: Webhooks para Confirmação (`POST /api/webhooks/mercado-pago`)**
+
+O webhook é essencial para confirmar pagamentos que não são instantâneos (como PIX pago depois ou boletos).
+
+1.  **Configuração:** No painel do Mercado Pago, configure um endpoint de webhook apontando para esta rota.
+2.  **Endpoint recebe:** Uma notificação do Mercado Pago, ex: `{ "type": "payment", "data": { "id": "12345" } }`.
+3.  **Backend:**
+    -   Recebe a notificação.
+    -   **NÃO CONFIE na notificação.** Imediatamente, use o `data.id` para fazer uma chamada GET segura de volta para a API do Mercado Pago e obter o status real do pagamento: `mercadopago.payment.findById(data.id)`.
+    -   Se o status do pagamento obtido for `approved`, o backend encontra o pedido associado e atualiza seu status no banco para `IN_PROGRESS`.
+    -   Responde ao Mercado Pago com um status `200 OK`.
+
+## 6. Estratégia de Upload de Arquivos (Segura e Escalável)
+
+Usaremos **URLs Pré-Assinadas** com um serviço como **AWS S3** ou compatível (Cloudflare R2, Google Cloud Storage).
+
+**Fluxo:**
+
+1.  **Frontend:** Antes de fazer o upload, o cliente (navegador) pede uma URL segura ao nosso backend.
+    -   `POST /api/orders/:id/generate-upload-url` com o body `{ "fileName": "matricula.pdf", "fileType": "application/pdf" }`.
+
+2.  **Backend:**
+    -   Verifica a permissão do usuário para o pedido.
+    -   Usa o SDK do serviço de nuvem (ex: `aws-sdk`) para gerar uma URL de upload de curta duração (ex: 5 minutos) que permite uma requisição `PUT` para um local específico no bucket de armazenamento.
+    -   Retorna `{ "uploadUrl": "https://s3...", "fileUrl": "https://public..." }` ao frontend.
+
+3.  **Frontend:**
+    -   Recebe a `uploadUrl`.
+    -   Faz uma requisição `PUT` diretamente para essa URL com o corpo do arquivo. O upload vai direto do navegador para o S3, sem passar pelo nosso servidor.
+
+4.  **Associação do Arquivo:**
+    -   Após o upload ser bem-sucedido, o frontend envia a `fileUrl` recebida no passo 2 para o nosso backend, por exemplo, ao enviar uma nova mensagem:
+    -   `POST /api/orders/:id/messages` com o body `{ "content": "Segue o anexo", "attachment": { "name": "...", "url": "https://public...", "size": 12345, "type": "..." } }`.
+    -   O backend então salva essa informação no banco, associada à mensagem e à lista de documentos do pedido.

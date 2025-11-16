@@ -1,7 +1,3 @@
-
-
-
-
 import React, { useState, createContext, useContext, useCallback } from 'react';
 import { User, Role, Page, AuthContextType, Order } from './types';
 import { MOCK_USERS, MOCK_ORDERS } from './constants';
@@ -43,6 +39,24 @@ const App: React.FC = () => {
             alert('Usuário ou perfil inválido!');
         }
     }, []);
+    
+    const signupAndLogin = useCallback((name: string, email: string) => {
+        const existingUser = MOCK_USERS.find(u => u.email === email);
+        if (existingUser) {
+            alert('Este e-mail já está cadastrado. Por favor, faça login.');
+            setPage(Page.Login);
+            return;
+        }
+        const newUser: User = {
+            id: `user-${Date.now()}`,
+            name,
+            email,
+            role: Role.Client,
+        };
+        MOCK_USERS.push(newUser);
+        setUser(newUser);
+        setPage(Page.Dashboard);
+    }, [setPage]);
 
     const logout = useCallback(() => {
         setUser(null);
@@ -50,16 +64,52 @@ const App: React.FC = () => {
         setSelectedOrder(null);
     }, []);
 
-    const signupAndLogin = useCallback((name: string, email: string) => {
-        const newUser: User = {
-            id: `user-${Date.now()}`,
-            name,
-            email,
-            role: Role.Client,
-        };
-        MOCK_USERS.push(newUser); // Add new user to mock data
-        setUser(newUser);
+    const loginWithGoogle = useCallback((googleToken: string) => {
+        console.log("[Frontend Simulation] Received Google Token. Sending to backend for verification:", googleToken);
+        
+        // --- INÍCIO DA SIMULAÇÃO DE BACKEND ---
+        // Em um app real, o token acima seria enviado para o backend.
+        // O backend verificaria o token com o Google, e então retornaria os dados do usuário.
+        // Para simular, decodificamos o token aqui mesmo no frontend.
+        let userData;
+        try {
+            const payload = googleToken.split('.')[1];
+            const decodedPayload = atob(payload);
+            const parsedPayload = JSON.parse(decodedPayload);
+            userData = {
+                email: parsedPayload.email,
+                name: parsedPayload.name,
+                picture: parsedPayload.picture,
+            };
+        } catch (error) {
+            console.error("Erro ao decodificar o token do Google (simulação):", error);
+            alert("Login com Google falhou. Token inválido.");
+            return;
+        }
+
+        const existingUser = MOCK_USERS.find(u => u.email === userData.email && u.role === Role.Client);
+
+        if (existingUser) {
+            // Se o usuário já existe, apenas atualiza a foto e faz o login.
+            existingUser.picture = userData.picture;
+            setUser(existingUser);
+            console.log("Usuário existente logado:", existingUser);
+        } else {
+            // Se não existe, cria um novo usuário cliente.
+            const newUser: User = {
+                id: `user-${Date.now()}`,
+                name: userData.name,
+                email: userData.email,
+                role: Role.Client,
+                picture: userData.picture,
+            };
+            MOCK_USERS.push(newUser);
+            setUser(newUser);
+            console.log("Novo usuário criado e logado:", newUser);
+        }
         setPage(Page.Dashboard);
+         // --- FIM DA SIMULAÇÃO DE BACKEND ---
+
     }, []);
 
     const updateOrder = useCallback((updatedOrder: Order) => {
@@ -81,8 +131,6 @@ const App: React.FC = () => {
         const isProtectedRoute = page === Page.Dashboard || page === Page.Order || page === Page.OrderDetail;
 
         if (isProtectedRoute && !user) {
-            // If trying to access a protected page without being logged in,
-            // render the LoginPage immediately and stop further processing.
             return <LoginPage />;
         }
         
@@ -96,13 +144,10 @@ const App: React.FC = () => {
             case Page.Signup:
                 return <SignupPage />;
             case Page.Order:
-                // We know the user exists because of the check above.
                 return <OrderFlow />;
             case Page.OrderDetail:
                 return <OrderDetailPage />;
             case Page.Dashboard:
-                 // We know the user exists because of the check above.
-                 // The 'user!' non-null assertion is safe here.
                 switch (user!.role) {
                     case Role.Admin:
                         return <AdminDashboard />;
@@ -111,7 +156,6 @@ const App: React.FC = () => {
                     case Role.Client:
                         return <ClientDashboard />;
                 }
-                // This break is technically unreachable but good practice
                 break;
             default:
                 return <LandingPage />;
@@ -119,7 +163,7 @@ const App: React.FC = () => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, page, setPage, signupAndLogin, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder }}>
+        <AuthContext.Provider value={{ user, login, signupAndLogin, logout, page, setPage, loginWithGoogle, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder }}>
             <div className="bg-brand-light min-h-screen flex flex-col font-sans text-slate-800">
                 <Header />
                 <main className="flex-grow">

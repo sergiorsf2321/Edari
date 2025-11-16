@@ -4,7 +4,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.QualifiedSearch,
     name: 'Pesquisa Qualificada',
-    description: 'Localiza imóveis de pessoas físicas ou jurídicas em base compartilhada pelos Cartórios de Registro de Imóveis.',
+    description: 'Localizamos imóveis em nome de pessoas físicas ou jurídicas, buscando por CPF/CNPJ nos cartórios de registro de imóveis.',
     price: 150,
     duration: 'Até 5 dias úteis',
     features: [
@@ -17,7 +17,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.DigitalCertificate,
     name: 'Certidão Digital',
-    description: 'Certidão oficial digital, assinada eletronicamente, com validade de 30 dias e emitida pelo cartório competente.',
+    description: 'Solicitamos a certidão de matrícula oficial e digital do seu imóvel, com validade jurídica de 30 dias para qualquer transação.',
     price: 80,
     duration: 'Até 5 dias úteis',
     features: [
@@ -30,7 +30,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.PreAnalysis,
     name: 'Pré-Análise e Intermediação Registral',
-    description: 'Analisamos previamente toda a documentação, identificamos pendências e orientamos como resolvê-las. Quando estiver tudo adequado, realizamos o protocolo no cartório.',
+    description: 'Analisamos sua documentação, apontamos pendências e, após as correções, protocolamos o processo no cartório competente para você.',
     price: null,
     duration: 'Personalizado',
     features: [
@@ -43,7 +43,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.DocPreparation,
     name: 'Preparação Documental',
-    description: 'Elaboramos requerimentos, plantas, memoriais descritivos e demais documentos necessários para averbações.',
+    description: 'Elaboramos os documentos técnicos, como requerimentos e memoriais, necessários para averbações e registros no seu imóvel.',
     price: null,
     duration: 'Personalizado',
     features: [
@@ -56,7 +56,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.ITBIRequest,
     name: 'Emissão de ITBI',
-    description: 'Realizamos a emissão do ITBI nas Secretarias de Finanças para permitir a formalização de contratos ou escrituras.',
+    description: 'Cuidamos da burocracia da emissão da guia do ITBI junto à prefeitura, agilizando a formalização da sua transação imobiliária.',
     price: 120,
     duration: '2-3 dias úteis',
     features: [
@@ -69,7 +69,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.TechnicalReport,
     name: 'Parecer Técnico de Matrícula',
-    description: 'Relatório preciso e técnico que vai indicar quais requisitos legais são necessários para regularizar no seu imóvel.',
+    description: 'Analisamos a matrícula do seu imóvel e entregamos um relatório técnico detalhado, apontando o caminho para a regularização completa.',
     price: 99,
     duration: 'Até 3 dias úteis',
     features: [
@@ -82,7 +82,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.DevolutionaryNoteAnalysis,
     name: 'Análises de Notas Devolutivas',
-    description: 'Receba um relatório bem detalhado que explica se essa pendência procede ou não e como você poderá solucioná-la.',
+    description: 'Analisamos a nota devolutiva do cartório e elaboramos um parecer técnico explicando as exigências e como cumpri-las.',
     price: null,
     duration: 'Personalizado',
     features: [

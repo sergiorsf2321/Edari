@@ -19,6 +19,7 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  picture?: string;
 }
 
 export enum ServiceId {
@@ -94,10 +95,11 @@ export interface PixResponse {
 export interface AuthContextType {
   user: User | null;
   login: (email: string, role: Role) => void;
+  signupAndLogin: (name: string, email: string) => void;
   logout: () => void;
   page: Page;
   setPage: (page: Page) => void;
-  signupAndLogin: (name: string, email: string) => void;
+  loginWithGoogle: (googleToken: string) => void;
   orders: Order[];
   selectedOrder: Order | null;
   setSelectedOrder: (order: Order | null) => void;
