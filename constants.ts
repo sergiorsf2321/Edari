@@ -95,10 +95,10 @@ export const SERVICES: Service[] = [
 ];
 
 export const MOCK_USERS: User[] = [
-    { id: 'user-1', name: 'Ana Cliente', email: 'ana@cliente.com', role: Role.Client },
-    { id: 'user-2', name: 'Bruno Analista', email: 'bruno@analista.com', role: Role.Analyst },
-    { id: 'user-3', name: 'Carlos Admin', email: 'carlos@admin.com', role: Role.Admin },
-    { id: 'user-4', name: 'Fernanda Analista', email: 'fernanda@analista.com', role: Role.Analyst },
+    { id: 'user-1', name: 'Ana Cliente', email: 'ana@cliente.com', role: Role.Client, isVerified: true },
+    { id: 'user-2', name: 'Bruno Analista', email: 'bruno@analista.com', role: Role.Analyst, isVerified: true },
+    { id: 'user-3', name: 'Carlos Admin', email: 'carlos@admin.com', role: Role.Admin, isVerified: true },
+    { id: 'user-4', name: 'Fernanda Analista', email: 'fernanda@analista.com', role: Role.Analyst, isVerified: true },
 ];
 
 export const MOCK_ORDERS: Order[] = [
@@ -114,6 +114,7 @@ export const MOCK_ORDERS: Order[] = [
         total: 150,
         createdAt: new Date('2023-10-26T10:00:00Z'),
         updatedAt: new Date('2023-10-27T10:00:00Z'),
+        paymentConfirmedAt: new Date('2023-10-26T10:05:00Z'),
         description: 'Gostaria de uma análise completa da matrícula do meu apartamento. Tenho urgência pois estou em processo de venda. A documentação parece estar ok, mas quero ter certeza antes de assinar o contrato de compra e venda.',
         messages: [
             { id: 'msg-1', sender: MOCK_USERS[0], content: 'Olá, acabei de enviar a matrícula para análise.', createdAt: new Date('2023-10-26T10:05:00Z') },
@@ -132,6 +133,7 @@ export const MOCK_ORDERS: Order[] = [
         total: 80,
         createdAt: new Date('2023-10-20T10:00:00Z'),
         updatedAt: new Date('2023-10-25T15:00:00Z'),
+        paymentConfirmedAt: new Date('2023-10-20T10:05:00Z'),
         report: { name: 'relatorio_final.pdf', size: 1024 * 300, type: 'application/pdf' },
         description: 'Preciso de ajuda para regularizar a averbação da construção da minha casa. Os documentos anexados são o contrato de compra do terreno e a planta aprovada pela prefeitura.',
         messages: [
@@ -140,7 +142,7 @@ export const MOCK_ORDERS: Order[] = [
     },
     {
         id: 'ORD-003',
-        client: { id: 'user-5', name: 'Outro Cliente', email: 'outro@cliente.com', role: Role.Client },
+        client: { id: 'user-5', name: 'Outro Cliente', email: 'outro@cliente.com', role: Role.Client, isVerified: true },
         service: SERVICES[2],
         status: OrderStatus.Pending,
         isUrgent: false,

@@ -1,9 +1,10 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '../App';
-import { SERVICES } from '../constants';
+import { SERVICES, MOCK_USERS } from '../constants';
 import { Service, UploadedFile, Page, ServiceId, Order, OrderStatus } from '../types';
 import { UploadIcon, FileIcon, TrashIcon, CheckCircleIcon } from '../components/icons/Icons';
 import Payment from '../components/Payment';
+import { BRAZILIAN_STATES, CITIES_BY_STATE, REGISTRIES_BY_CITY } from '../data/locations';
 
 const OrderFlow: React.FC = () => {
     const [step, setStep] = useState(1);
@@ -18,6 +19,10 @@ const OrderFlow: React.FC = () => {
     
     const { user, setPage, addOrder } = useAuth();
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, []);
+
     const total = useMemo(() => {
         if (!selectedService || selectedService.price === null) return 0;
         return selectedService.price;
@@ -27,7 +32,24 @@ const OrderFlow: React.FC = () => {
     const isPesquisaQualificada = useMemo(() => selectedService?.id === ServiceId.QualifiedSearch, [selectedService]);
 
     const handleServiceDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        setServiceSpecificData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+        const { name, value } = e.target;
+        setServiceSpecificData(prev => {
+            const processedValue = name === 'matricula'
+                ? value.replace(/\D/g, '') // Remove non-digit characters for 'matricula'
+                : value;
+            
+            const newState = { ...prev, [name]: processedValue };
+            if (name === 'state') {
+                // Reset city and registry when state changes
+                delete newState.city;
+                delete newState.registry;
+            }
+            if (name === 'city') {
+                // Reset registry when city changes
+                delete newState.registry;
+            }
+            return newState;
+        });
     };
     
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,6 +70,35 @@ const OrderFlow: React.FC = () => {
     const nextStep = () => setStep(s => s + 1);
     const prevStep = () => setStep(s => s - 1);
     
+    const generateOrderDescription = (): string => {
+        if (!selectedService) return documentDescription;
+
+        const { state, city, registry, cpfCnpj, matricula, intendedAct, comarca, registries } = serviceSpecificData;
+        const stateName = state ? BRAZILIAN_STATES.find(s => s.uf === state)?.name : '';
+        const locationInfo = [city, stateName].filter(Boolean).join(' - ');
+
+        let generatedDescription = '';
+
+        switch (selectedService.id) {
+            case ServiceId.QualifiedSearch:
+                generatedDescription = `Pesquisa Qualificada para CPF/CNPJ: ${cpfCnpj || 'Não informado'}\nLocal: ${locationInfo}\nCartórios Específicos: ${registries || 'Todos da cidade'}`;
+                break;
+            case ServiceId.DigitalCertificate:
+                generatedDescription = `Solicitação de Certidão Digital\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
+                break;
+            case ServiceId.PreAnalysis:
+                generatedDescription = `Solicitação de Pré-Análise e Intermediação\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nComarca: ${comarca || city}`;
+                break;
+            case ServiceId.DocPreparation:
+                generatedDescription = `Preparação Documental\nAto Pretendido: ${intendedAct || 'Não informado'}\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
+                break;
+            default:
+                return documentDescription;
+        }
+
+        return `${generatedDescription}\n\nObservações do cliente:\n${documentDescription || 'Nenhuma.'}`;
+    };
+
     const handleConsultationSubmit = () => {
         if (!user || !selectedService) return;
         const newOrder: Omit<Order, 'id'> = {
@@ -62,7 +113,7 @@ const OrderFlow: React.FC = () => {
             createdAt: new Date(),
             updatedAt: new Date(),
             report: undefined,
-            description: documentDescription,
+            description: generateOrderDescription(),
             messages: []
         };
         addOrder(newOrder);
@@ -75,7 +126,7 @@ const OrderFlow: React.FC = () => {
         const newOrder: Omit<Order, 'id'> = {
             client: user,
             service: selectedService,
-            analyst: undefined,
+            analyst: MOCK_USERS.find(u => u.role === 'ANALYST'),
             status: OrderStatus.InProgress,
             isUrgent: false,
             propertyType: 'N/A',
@@ -83,10 +134,9 @@ const OrderFlow: React.FC = () => {
             total: total,
             createdAt: new Date(),
             updatedAt: new Date(),
+            paymentConfirmedAt: new Date(),
             report: undefined,
-            description: isPesquisaQualificada 
-                ? `Pesquisa para o CPF/CNPJ: ${serviceSpecificData.cpfCnpj || 'Não informado'}` 
-                : documentDescription,
+            description: generateOrderDescription(),
             messages: [
                 { id: `msg-${Date.now()}`, sender: user!, content: 'Pedido criado e pagamento efetuado.', createdAt: new Date() }
             ]
@@ -106,17 +156,19 @@ const OrderFlow: React.FC = () => {
 
     const isStep1Valid = useCallback(() => {
         if (!selectedService) return false;
+        
         const requiredFields: { [key in ServiceId]?: string[] } = {
-            [ServiceId.QualifiedSearch]: ['cpfCnpj', 'state', 'city', 'registries'],
-            [ServiceId.DigitalCertificate]: ['city', 'matricula', 'registry'],
-            [ServiceId.PreAnalysis]: ['registry', 'comarca', 'state'],
-            [ServiceId.DocPreparation]: ['intendedAct', 'matricula', 'city', 'registry'],
+            [ServiceId.QualifiedSearch]: ['cpfCnpj', 'state', 'city'],
+            [ServiceId.DigitalCertificate]: ['state', 'city', 'registry', 'matricula'],
+            [ServiceId.PreAnalysis]: ['state', 'city', 'registry'],
+            [ServiceId.DocPreparation]: ['intendedAct', 'state', 'city', 'registry', 'matricula'],
             [ServiceId.ITBIRequest]: [],
             [ServiceId.TechnicalReport]: [],
             [ServiceId.DevolutionaryNoteAnalysis]: [],
         };
+
         const fields = requiredFields[selectedService.id] || [];
-        return fields.every(field => serviceSpecificData[field]?.trim());
+        return fields.every(field => serviceSpecificData[field] && serviceSpecificData[field].trim());
     }, [selectedService, serviceSpecificData]);
     
     const Stepper = () => {
@@ -179,51 +231,96 @@ const OrderFlow: React.FC = () => {
     const renderServiceSpecificFields = () => {
         if (!selectedService) return null;
         
-        const commonFields = "w-full p-3 border rounded-lg bg-white text-slate-900";
-        const renderInput = (name: string, label: string, placeholder = '') => (
+        const commonFields = "w-full p-3 border rounded-lg bg-white text-slate-900 disabled:bg-slate-100 disabled:cursor-not-allowed";
+        
+        const renderInput = (name: string, label: string, placeholder = '', type: 'text' | 'textarea' = 'text', required = true) => (
             <div>
                 <label htmlFor={name} className="block text-sm font-medium mb-1">{label}</label>
-                <input type="text" id={name} name={name} value={serviceSpecificData[name] || ''} onChange={handleServiceDataChange} className={commonFields} placeholder={placeholder} required />
+                {type === 'text' ? (
+                    <input 
+                        type="text" 
+                        id={name} 
+                        name={name} 
+                        value={serviceSpecificData[name] || ''} 
+                        onChange={handleServiceDataChange} 
+                        className={commonFields} 
+                        placeholder={placeholder} 
+                        required={required}
+                        inputMode={name === 'matricula' ? 'numeric' : 'text'}
+                    />
+                ) : (
+                    <textarea id={name} name={name} value={serviceSpecificData[name] || ''} onChange={handleServiceDataChange} className={commonFields} placeholder={placeholder} required={required} rows={3} />
+                )}
             </div>
         );
+
+        const selectedState = serviceSpecificData.state;
+        const selectedCity = serviceSpecificData.city;
+        const citiesForState = selectedState ? CITIES_BY_STATE[selectedState] || [] : [];
+        const registriesForCity = selectedCity ? (REGISTRIES_BY_CITY[selectedCity] || [`Cartório de Registro de Imóveis de ${selectedCity}`]) : [];
+    
+        const renderLocationSelectors = (config: { state?: boolean, city?: boolean, registry?: boolean }) => (
+            <>
+                {config.state && (
+                    <div>
+                        <label htmlFor="state" className="block text-sm font-medium mb-1">Estado</label>
+                        <select id="state" name="state" value={selectedState || ''} onChange={handleServiceDataChange} className={commonFields} required>
+                            <option value="" disabled>Selecione um estado</option>
+                            {BRAZILIAN_STATES.map(state => <option key={state.uf} value={state.uf}>{state.name}</option>)}
+                        </select>
+                    </div>
+                )}
+                {config.city && (
+                     <div>
+                        <label htmlFor="city" className="block text-sm font-medium mb-1">Cidade</label>
+                        <select id="city" name="city" value={selectedCity || ''} onChange={handleServiceDataChange} className={commonFields} disabled={!selectedState || citiesForState.length === 0} required>
+                            <option value="" disabled>Selecione uma cidade</option>
+                            {citiesForState.map(city => <option key={city} value={city}>{city}</option>)}
+                        </select>
+                    </div>
+                )}
+                {config.registry && (
+                     <div>
+                        <label htmlFor="registry" className="block text-sm font-medium mb-1">Cartório de Registro de Imóveis</label>
+                        <select id="registry" name="registry" value={serviceSpecificData.registry || ''} onChange={handleServiceDataChange} className={commonFields} disabled={!selectedCity || registriesForCity.length === 0} required>
+                            <option value="" disabled>Selecione um cartório</option>
+                            {registriesForCity.map(registry => <option key={registry} value={registry}>{registry}</option>)}
+                        </select>
+                    </div>
+                )}
+            </>
+        );
+
 
         switch(selectedService.id) {
             case ServiceId.QualifiedSearch:
                 return (
                     <div className="space-y-4">
                         {renderInput('cpfCnpj', 'CPF ou CNPJ do Pesquisado')}
-                        <div className="grid grid-cols-2 gap-4">
-                            {renderInput('state', 'Estado')}
-                            {renderInput('city', 'Cidade')}
-                        </div>
-                        {renderInput('registries', 'Cartórios da Busca (separados por vírgula)')}
+                        {renderLocationSelectors({ state: true, city: true })}
+                        {renderInput('registries', 'Cartórios Específicos (Opcional)', 'Deixe em branco para buscar em todos da cidade', 'text', false)}
                     </div>
                 );
             case ServiceId.DigitalCertificate:
                  return (
                     <div className="space-y-4">
-                        {renderInput('city', 'Cidade do Imóvel')}
+                        {renderLocationSelectors({ state: true, city: true, registry: true })}
                         {renderInput('matricula', 'Número da Matrícula')}
-                        {renderInput('registry', 'Cartório de Registro de Imóveis')}
                     </div>
                 );
             case ServiceId.PreAnalysis:
                 return (
                     <div className="space-y-4">
-                        {renderInput('registry', 'Cartório de Registro de Imóveis')}
-                        {renderInput('comarca', 'Comarca')}
-                        {renderInput('state', 'Estado')}
+                        {renderLocationSelectors({ state: true, city: true, registry: true })}
+                        {renderInput('comarca', 'Comarca (se diferente da cidade)', '', 'text', false)}
                     </div>
                 );
             case ServiceId.DocPreparation:
                 return (
                     <div className="space-y-4">
-                         {renderInput('intendedAct', 'Ato Pretendido (ex: Averbação de construção)')}
+                         {renderInput('intendedAct', 'Ato Pretendido (ex: Averbação de construção)', '', 'textarea')}
+                         {renderLocationSelectors({ state: true, city: true, registry: true })}
                          {renderInput('matricula', 'Número da Matrícula')}
-                         <div className="grid grid-cols-2 gap-4">
-                            {renderInput('city', 'Cidade')}
-                            {renderInput('registry', 'Cartório')}
-                        </div>
                     </div>
                 );
             case ServiceId.ITBIRequest:

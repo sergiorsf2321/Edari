@@ -1,8 +1,12 @@
 import React from 'react';
 import { MailIcon, PhoneIcon } from './icons/Icons';
 import { LOGO_URL } from '../assets';
+import { useAuth } from '../App';
+import { Page } from '../types';
 
 const Footer: React.FC = () => {
+    const { setPage } = useAuth();
+
     return (
       <footer className="bg-gray-900 text-white py-12 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-center items-center md:items-start text-center md:text-left gap-12">
@@ -34,6 +38,15 @@ const Footer: React.FC = () => {
         
         <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-gray-800 text-center text-gray-400 text-sm">
           <p>&copy; {new Date().getFullYear()} EDARI - Todos os direitos reservados</p>
+           <p className="mt-4">
+              <button
+                onClick={() => setPage(Page.StaffLogin)}
+                className="hover:text-white transition-colors"
+                aria-label="Acesso restrito para colaboradores"
+              >
+                Acesso Restrito
+              </button>
+            </p>
         </div>
       </footer>
     );

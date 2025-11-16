@@ -1,4 +1,4 @@
-import React, { useState, createContext, useContext, useCallback } from 'react';
+import React, { useState, createContext, useContext, useCallback, useEffect } from 'react';
 import { User, Role, Page, AuthContextType, Order } from './types';
 import { MOCK_USERS, MOCK_ORDERS } from './constants';
 
@@ -13,6 +13,7 @@ import AnalystDashboard from './pages/AnalystDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import StaffLoginPage from './pages/StaffLoginPage';
 import OrderDetailPage from './pages/OrderDetailPage';
+import EmailConfirmationPage from './pages/EmailConfirmationPage';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -29,10 +30,21 @@ const App: React.FC = () => {
     const [page, setPage] = useState<Page>(Page.Landing);
     const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+    const [lastRegisteredEmail, setLastRegisteredEmail] = useState<string | null>(null);
+
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [page]);
 
     const login = useCallback((email: string, role: Role) => {
         const foundUser = MOCK_USERS.find(u => u.email === email && u.role === role);
         if (foundUser) {
+            if (!foundUser.isVerified) {
+                alert('Seu e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada e siga as instruções de confirmação.');
+                setLastRegisteredEmail(email); // For simulation purposes
+                setPage(Page.EmailConfirmation);
+                return;
+            }
             setUser(foundUser);
             setPage(Page.Dashboard);
         } else {
@@ -40,7 +52,7 @@ const App: React.FC = () => {
         }
     }, []);
     
-    const signupAndLogin = useCallback((name: string, email: string) => {
+    const registerUser = useCallback((name: string, email: string, cpf: string, birthDate: string, address: string) => {
         const existingUser = MOCK_USERS.find(u => u.email === email);
         if (existingUser) {
             alert('Este e-mail já está cadastrado. Por favor, faça login.');
@@ -51,12 +63,25 @@ const App: React.FC = () => {
             id: `user-${Date.now()}`,
             name,
             email,
+            cpf,
+            birthDate,
+            address,
             role: Role.Client,
+            isVerified: false, // User starts as unverified
         };
         MOCK_USERS.push(newUser);
-        setUser(newUser);
-        setPage(Page.Dashboard);
+        setLastRegisteredEmail(email);
+        setPage(Page.EmailConfirmation);
+        console.log("Novo usuário criado (não verificado):", newUser);
     }, [setPage]);
+
+    const verifyUser = useCallback((email: string) => {
+        const userToVerify = MOCK_USERS.find(u => u.email === email);
+        if (userToVerify) {
+            userToVerify.isVerified = true;
+            console.log("Usuário verificado:", userToVerify);
+        }
+    }, []);
 
     const logout = useCallback(() => {
         setUser(null);
@@ -67,10 +92,6 @@ const App: React.FC = () => {
     const loginWithGoogle = useCallback((googleToken: string) => {
         console.log("[Frontend Simulation] Received Google Token. Sending to backend for verification:", googleToken);
         
-        // --- INÍCIO DA SIMULAÇÃO DE BACKEND ---
-        // Em um app real, o token acima seria enviado para o backend.
-        // O backend verificaria o token com o Google, e então retornaria os dados do usuário.
-        // Para simular, decodificamos o token aqui mesmo no frontend.
         let userData;
         try {
             const payload = googleToken.split('.')[1];
@@ -90,26 +111,65 @@ const App: React.FC = () => {
         const existingUser = MOCK_USERS.find(u => u.email === userData.email && u.role === Role.Client);
 
         if (existingUser) {
-            // Se o usuário já existe, apenas atualiza a foto e faz o login.
             existingUser.picture = userData.picture;
+            existingUser.isVerified = true; // Google accounts are implicitly verified
             setUser(existingUser);
             console.log("Usuário existente logado:", existingUser);
         } else {
-            // Se não existe, cria um novo usuário cliente.
             const newUser: User = {
                 id: `user-${Date.now()}`,
                 name: userData.name,
                 email: userData.email,
                 role: Role.Client,
                 picture: userData.picture,
+                isVerified: true, // Google accounts are implicitly verified
             };
             MOCK_USERS.push(newUser);
             setUser(newUser);
             console.log("Novo usuário criado e logado:", newUser);
         }
         setPage(Page.Dashboard);
-         // --- FIM DA SIMULAÇÃO DE BACKEND ---
 
+    }, []);
+    
+    const loginWithApple = useCallback((appleToken: string) => {
+        console.log("[Frontend Simulation] Received Apple Token. Sending to backend for verification:", appleToken);
+        
+        let userData;
+        try {
+            const payload = appleToken.split('.')[1];
+            const decodedPayload = atob(payload);
+            const parsedPayload = JSON.parse(decodedPayload);
+            userData = {
+                email: parsedPayload.email,
+                // Apple doesn't always send the name, but for simulation we'll construct a default name if needed.
+                name: parsedPayload.name || parsedPayload.email.split('@')[0], 
+            };
+        } catch (error) {
+            console.error("Erro ao decodificar o token da Apple (simulação):", error);
+            alert("Login com Apple falhou. Token inválido.");
+            return;
+        }
+
+        const existingUser = MOCK_USERS.find(u => u.email === userData.email && u.role === Role.Client);
+
+        if (existingUser) {
+            existingUser.isVerified = true; // Apple accounts are implicitly verified
+            setUser(existingUser);
+            console.log("Usuário existente logado via Apple:", existingUser);
+        } else {
+            const newUser: User = {
+                id: `user-${Date.now()}`,
+                name: userData.name,
+                email: userData.email,
+                role: Role.Client,
+                isVerified: true, // Apple accounts are implicitly verified
+            };
+            MOCK_USERS.push(newUser);
+            setUser(newUser);
+            console.log("Novo usuário criado e logado via Apple:", newUser);
+        }
+        setPage(Page.Dashboard);
     }, []);
 
     const updateOrder = useCallback((updatedOrder: Order) => {
@@ -143,6 +203,8 @@ const App: React.FC = () => {
                 return <StaffLoginPage />;
             case Page.Signup:
                 return <SignupPage />;
+            case Page.EmailConfirmation:
+                return <EmailConfirmationPage />;
             case Page.Order:
                 return <OrderFlow />;
             case Page.OrderDetail:
@@ -163,7 +225,7 @@ const App: React.FC = () => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, signupAndLogin, logout, page, setPage, loginWithGoogle, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder }}>
+        <AuthContext.Provider value={{ user, login, registerUser, verifyUser, logout, page, setPage, loginWithGoogle, loginWithApple, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder, lastRegisteredEmail }}>
             <div className="bg-brand-light min-h-screen flex flex-col font-sans text-slate-800">
                 <Header />
                 <main className="flex-grow">

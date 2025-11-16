@@ -25,6 +25,7 @@ import {
     Handshake as HandshakeIcon,
     ScanText as ScanTextIcon,
     FileSearch2 as FileSearch2Icon,
+    MailCheck as MailCheckIcon,
 } from 'lucide-react';
 
 export {
@@ -54,4 +55,5 @@ export {
     HandshakeIcon,
     ScanTextIcon,
     FileSearch2Icon,
+    MailCheckIcon,
 };

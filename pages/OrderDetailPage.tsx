@@ -6,6 +6,30 @@ import { DownloadIcon, FileIcon, PaperclipIcon, SendIcon, TrashIcon } from '../c
 import StatusBadge from '../components/StatusBadge';
 import Payment from '../components/Payment';
 
+const calculateCompletionDate = (startDate: Date, durationString: string): string => {
+    if (durationString.toLowerCase().includes('personalizado')) {
+        return 'A definir';
+    }
+    
+    const matches = durationString.match(/\d+/g);
+    if (!matches) {
+        return 'A definir';
+    }
+
+    const days = parseInt(matches[matches.length - 1], 10);
+    
+    let date = new Date(startDate);
+    let added = 0;
+    while (added < days) {
+        date.setDate(date.getDate() + 1);
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek !== 0 && dayOfWeek !== 6) { // 0 = Sunday, 6 = Saturday
+            added++;
+        }
+    }
+    return date.toLocaleDateString('pt-BR');
+};
+
 const OrderDetailPage: React.FC = () => {
     const { user, selectedOrder, updateOrder, setPage, setSelectedOrder } = useAuth();
     const [newMessage, setNewMessage] = useState('');
@@ -30,6 +54,10 @@ const OrderDetailPage: React.FC = () => {
     }
     
     const analysts = MOCK_USERS.filter(u => u.role === Role.Analyst);
+    
+    const estimatedCompletionDate = selectedOrder.paymentConfirmedAt
+        ? calculateCompletionDate(selectedOrder.paymentConfirmedAt, selectedOrder.service.duration)
+        : null;
 
     const handleSendMessage = () => {
         if (newMessage.trim() === '' && !attachment) return;
@@ -114,7 +142,8 @@ const OrderDetailPage: React.FC = () => {
             ...selectedOrder, 
             status: nextStatus, 
             messages: [...selectedOrder.messages, message],
-            updatedAt: new Date() 
+            updatedAt: new Date(),
+            paymentConfirmedAt: new Date(),
         });
     };
 
@@ -144,6 +173,12 @@ const OrderDetailPage: React.FC = () => {
                                  <div className="flex justify-between"><span className="text-slate-500">Cliente:</span><span className="font-medium text-slate-800">{selectedOrder.client.name}</span></div>
                                  <div className="flex justify-between"><span className="text-slate-500">Serviço:</span><span className="font-medium text-slate-800">{selectedOrder.service.name}</span></div>
                                  <div className="flex justify-between"><span className="text-slate-500">Data do Pedido:</span><span className="font-medium text-slate-800">{selectedOrder.createdAt.toLocaleDateString('pt-BR')}</span></div>
+                                 {estimatedCompletionDate && (
+                                    <div className="flex justify-between">
+                                        <span className="text-slate-500">Previsão de Conclusão:</span>
+                                        <span className="font-medium text-slate-800">{estimatedCompletionDate}</span>
+                                    </div>
+                                 )}
                                  <div className="flex justify-between items-center">
                                      <span className="text-slate-500">Analista:</span>
                                      {user.role === Role.Admin && !selectedOrder.analyst ? (

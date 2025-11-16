@@ -2,13 +2,20 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../App';
 import { Page, Role } from '../types';
 
-// Declaração para a biblioteca global do Google
+// Declaração para as bibliotecas globais do Google e da Apple
 declare global {
   const google: any;
+  const AppleID: any;
 }
 
+const AppleIcon = () => (
+    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M19.39,14.73a5.3,5.3,0,0,1-2.2-3.59,4.41,4.41,0,0,1,1.1-3.28,4.78,4.78,0,0,0-3.3-1.2,5.26,5.26,0,0,0-4.3,2.43,5.33,5.33,0,0,0-4.3-2.43,5,5,0,0,0-4.4,5.15A7.82,7.82,0,0,0,5.89,20.4,5,5,0,0,0,10,22a4.8,4.8,0,0,0,4.2-2.31,4.4,4.4,0,0,0,1.1-1.35C16.29,18.06,19.39,14.73,19.39,14.73ZM13.19,6.1a3.14,3.14,0,0,1,1-2.28,3,3,0,0,0-2.3-1.12,3.13,3.13,0,0,0-2.7,1.72,3.18,3.18,0,0,0-.6,2.35A2.77,2.77,0,0,0,9,7.1,3.22,3.22,0,0,1,13.19,6.1Z" />
+    </svg>
+);
+
 const LoginPage: React.FC = () => {
-    const { login, loginWithGoogle, setPage } = useAuth();
+    const { login, loginWithGoogle, loginWithApple, setPage } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement>(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -23,33 +30,58 @@ const LoginPage: React.FC = () => {
         loginWithGoogle(response.credential);
     };
 
+    const handleAppleSignIn = async () => {
+        try {
+            const data = await AppleID.auth.signIn();
+            loginWithApple(data.authorization.id_token);
+        } catch (error) {
+            console.error("Erro no login com a Apple:", error);
+            alert("Ocorreu um erro durante o login com a Apple. Por favor, tente novamente.");
+        }
+    };
+
     useEffect(() => {
-        if (typeof google === 'undefined') {
+        // Google Sign-In
+        if (typeof google !== 'undefined') {
+            google.accounts.id.initialize({
+                // =======================================================================
+                // ATENÇÃO, EQUIPE DE BACKEND:
+                // O Client ID abaixo é um placeholder. Ele DEVE ser substituído pelo 
+                // Client ID real, obtido no Google Cloud Console e configurado para
+                // o domínio de produção.
+                // =======================================================================
+                client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+                callback: handleGoogleSignIn
+            });
+
+            if (googleButtonRef.current) {
+                google.accounts.id.renderButton(
+                    googleButtonRef.current,
+                    { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
+                );
+            }
+        } else {
             console.error("Google Identity Services script not loaded.");
-            return;
         }
 
-        google.accounts.id.initialize({
-            // =======================================================================
-            // ATENÇÃO: O erro "401: invalid_client" ocorre porque o ID abaixo
-            // é um placeholder. Você PRECISA substituí-lo pelo seu Client ID real,
-            // obtido no Google Cloud Console em "APIs & Services > Credentials".
-            // Além disso, certifique-se de que o domínio em que você está
-            // rodando a aplicação (ex: http://localhost:3000) está listado nos
-            // "Authorized JavaScript origins".
-            // =======================================================================
-            client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
-            callback: handleGoogleSignIn
-        });
-
-        if (googleButtonRef.current) {
-            google.accounts.id.renderButton(
-                googleButtonRef.current,
-                { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
-            );
+        // Apple Sign-In
+        if (typeof AppleID !== 'undefined') {
+            AppleID.auth.init({
+                // =======================================================================
+                // ATENÇÃO, EQUIPE DE BACKEND:
+                // O Service ID (clientId) abaixo é um exemplo. Ele DEVE ser substituído 
+                // pelo Service ID real, configurado na sua conta de desenvolvedor Apple.
+                // O redirectURI também deve ser ajustado para o domínio de produção.
+                // =======================================================================
+                clientId : 'br.com.edari.signin', // Exemplo de Service ID
+                scope : 'name email',
+                redirectURI : window.location.origin, // Para popup, o origin é suficiente
+                usePopup : true
+            });
+        } else {
+             console.error("Apple Sign In JS script not loaded.");
         }
-
-    }, [loginWithGoogle]);
+    }, [loginWithGoogle, loginWithApple]);
 
     return (
         <div className="bg-brand-light py-12 sm:py-24">
@@ -78,8 +110,16 @@ const LoginPage: React.FC = () => {
                         <div className="flex-grow border-t border-slate-300"></div>
                     </div>
 
-                    <div className="flex justify-center">
+                    <div className="flex flex-col items-center">
                         <div ref={googleButtonRef}></div>
+                        <button
+                            type="button"
+                            onClick={handleAppleSignIn}
+                            className="mt-3 w-[300px] bg-black text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center hover:bg-gray-800 transition-colors"
+                        >
+                            <AppleIcon />
+                            Entrar com a Apple
+                        </button>
                     </div>
                     
                     <p className="text-center text-sm text-slate-600 mt-8">
@@ -89,16 +129,6 @@ const LoginPage: React.FC = () => {
                             className="font-semibold text-brand-secondary hover:underline"
                         >
                             Crie agora
-                        </button>
-                    </p>
-
-                    <p className="text-center text-xs text-slate-500 mt-6 pt-4 border-t">
-                        Acesso para colaboradores?{' '}
-                        <button 
-                            onClick={() => setPage(Page.StaffLogin)} 
-                            className="font-semibold text-brand-secondary hover:underline"
-                        >
-                            Entrar aqui
                         </button>
                     </p>
                 </div>

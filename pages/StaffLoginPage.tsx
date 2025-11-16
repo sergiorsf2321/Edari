@@ -26,8 +26,6 @@ const StaffLoginPage: React.FC = () => {
         setResetEmailSent(true);
     };
 
-    const exampleEmails = MOCK_USERS.filter(u => u.role === role).map(u => u.email).join(', ');
-
     return (
         <div className="bg-brand-light py-12 sm:py-24">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8 flex justify-center">
@@ -111,9 +109,6 @@ const StaffLoginPage: React.FC = () => {
                                     placeholder="seu@email.com"
                                     required
                                 />
-                                <p className="text-xs text-slate-500 mt-2">
-                                    Ex: {exampleEmails}
-                                </p>
                             </div>
                             <div className="mb-4">
                                 <label htmlFor="password"className="block text-sm font-medium text-slate-700 mb-2">Senha</label>

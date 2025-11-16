@@ -12,6 +12,7 @@ export enum Page {
   Order,
   Dashboard,
   OrderDetail,
+  EmailConfirmation,
 }
 
 export interface User {
@@ -20,6 +21,10 @@ export interface User {
   email: string;
   role: Role;
   picture?: string;
+  isVerified?: boolean;
+  cpf?: string;
+  birthDate?: string;
+  address?: string;
 }
 
 export enum ServiceId {
@@ -75,6 +80,7 @@ export interface Order {
   total: number;
   createdAt: Date;
   updatedAt: Date;
+  paymentConfirmedAt?: Date;
   report?: UploadedFile;
   description: string;
   messages: Message[];
@@ -95,14 +101,17 @@ export interface PixResponse {
 export interface AuthContextType {
   user: User | null;
   login: (email: string, role: Role) => void;
-  signupAndLogin: (name: string, email: string) => void;
+  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string) => void;
+  verifyUser: (email: string) => void;
   logout: () => void;
   page: Page;
   setPage: (page: Page) => void;
   loginWithGoogle: (googleToken: string) => void;
+  loginWithApple: (appleToken: string) => void;
   orders: Order[];
   selectedOrder: Order | null;
   setSelectedOrder: (order: Order | null) => void;
   updateOrder: (updatedOrder: Order) => void;
   addOrder: (newOrderData: Omit<Order, 'id'>) => void;
+  lastRegisteredEmail: string | null;
 }

@@ -67,14 +67,15 @@ const AdminDashboard: React.FC = () => {
     const revenueByService = useMemo(() => {
         return orders
             .filter(order => order.status === OrderStatus.Completed)
-            // FIX: Correctly typed the initial value for reduce. This ensures `revenueByService` is
-            // inferred as Record<string, number>, resolving errors in sorting and formatting revenue data.
             .reduce((acc, order) => {
                 const serviceName = order.service.name;
                 if (!acc[serviceName]) {
                     acc[serviceName] = 0;
                 }
-                acc[serviceName] += order.total;
+                // FIX: Ensure order.total is a valid number before adding to prevent NaN errors.
+                if (typeof order.total === 'number') {
+                    acc[serviceName] += order.total;
+                }
                 return acc;
             }, {} as Record<string, number>);
     }, [orders]);
@@ -131,14 +132,12 @@ const AdminDashboard: React.FC = () => {
                                     fill="#8884d8"
                                     dataKey="value"
                                     nameKey="name"
-                                    // FIX: The `percent` property can be undefined. Added a fallback to 0 to prevent arithmetic errors.
                                     label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                                 >
                                     {statusChartData.map((entry, index) => (
                                         <Cell key={`cell-${index}`} fill={STATUS_COLORS[index % STATUS_COLORS.length]} />
                                     ))}
                                 </Pie>
-                                {/* FIX: Changed formatter function parameter type to 'any' to avoid type conflicts with recharts library and fix a misleading error. */}
                                 <Tooltip formatter={(value: any) => `${value} pedido(s)`}/>
                                 <Legend wrapperStyle={{fontSize: '14px'}}/>
                             </PieChart>
