@@ -7,64 +7,22 @@
     <link rel="icon" type="image/png" href="https://i.ibb.co/DqFcLt4/LOGO.png" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script type="text/javascript" src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            colors: {
-              'brand-primary': '#1e3a8a', // a deep blue
-              'brand-secondary': '#1d4ed8', // a slightly lighter blue
-              'brand-accent': '#f97316', // an orange accent
-              'brand-light': '#f0f9ff', // very light blue
-            }
-          }
-        }
-      }
-    </script>
-  <style>
-    .bg-pattern {
-      background-image: url("data:image/svg+xml,%3Csvg width='52' height='26' viewBox='0 0 52 26' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M10 10c0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6h2c0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4 3.314 0 6 2.686 6 6 0 2.21 1.79 4 4 4v2c-3.314 0-6-2.686-6-6 0-2.21-1.79-4-4-4-3.314 0-6-2.686-6-6zm25.464-1.95l8.486 8.486-1.414 1.414-8.486-8.486 1.414-1.414z' /%3E%3C/g%3E%3C/g%3E%C/svg%3E");
-    }
-    .logo-sheen {
-      position: relative;
-      overflow: hidden;
-    }
-    .logo-sheen::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      left: -150%;
-      width: 40%;
-      height: 100%;
-      background: linear-gradient(
-        to right,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.4) 50%,
-        rgba(255, 255, 255, 0) 100%
-      );
-      transform: skewX(-25deg);
-      transition: left 0.65s ease-in-out;
-    }
-    .logo-sheen:hover::after {
-      left: 150%;
-    }
-  </style>
   <script type="importmap">
 {
   "imports": {
-    "react-dom/": "https://aistudiocdn.com/react-dom@^18.2.0/",
-    "react": "https://aistudiocdn.com/react@^18.2.0",
-    "react/": "https://aistudiocdn.com/react@^18.2.0/",
-    "recharts": "https://aistudiocdn.com/recharts@2.12.7/es6/index.js",
-    "recharts/": "https://aistudiocdn.com/recharts@2.12.7/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.395.0"
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "recharts": "https://aistudiocdn.com/recharts@^3.4.1",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.553.0",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "vite": "https://aistudiocdn.com/vite@^7.2.2"
   }
 }
 </script>
 </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/index.tsx"></script>
+    <script type="module" src="/src/index.tsx"></script>
   </body>
 </html>
