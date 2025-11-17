@@ -5,7 +5,7 @@ export const SERVICES: Service[] = [
     id: ServiceId.QualifiedSearch,
     name: 'Pesquisa Qualificada',
     description: 'Localizamos imóveis em nome de pessoas físicas ou jurídicas, buscando por CPF/CNPJ nos cartórios de registro de imóveis.',
-    price: 150,
+    price: 49.90,
     duration: 'Até 5 dias úteis',
     features: [
       'Busca por CPF ou CNPJ',
@@ -18,7 +18,7 @@ export const SERVICES: Service[] = [
     id: ServiceId.DigitalCertificate,
     name: 'Certidão Digital',
     description: 'Solicitamos a certidão de matrícula oficial e digital do seu imóvel, com validade jurídica de 30 dias para qualquer transação.',
-    price: 80,
+    price: 169.90,
     duration: 'Até 5 dias úteis',
     features: [
       'Documento oficial com validade jurídica',
@@ -29,15 +29,29 @@ export const SERVICES: Service[] = [
   },
   {
     id: ServiceId.PreAnalysis,
-    name: 'Pré-Análise e Intermediação Registral',
-    description: 'Analisamos sua documentação, apontamos pendências e, após as correções, protocolamos o processo no cartório competente para você.',
+    name: 'Pré-Análise Documental',
+    description: 'Analisamos sua documentação, apontamos pendências e orientamos sobre os próximos passos para a regularização no cartório competente.',
     price: null,
     duration: 'Personalizado',
     features: [
       'Análise de contratos, escrituras, plantas, etc.',
       'Diagnóstico de pendências registrais',
       'Orientação técnica para regularização',
-      'Serviço de protocolo e intermediação',
+      'Comunicação direta com especialistas',
+    ]
+  },
+  {
+    id: ServiceId.RegistryIntermediation,
+    name: 'Intermediação Registral',
+    description: 'Realizamos o protocolo e acompanhamento do seu processo de forma 100% digital no cartório competente. Toda a documentação deve ser nato-digital. Os custos de cartório (emolumentos) serão repassados de forma transparente dentro da plataforma.',
+    price: 150,
+    duration: 'Personalizado',
+    features: [
+      'Protocolo digital via ONR',
+      'A documentação precisa ser toda nato-digital',
+      'Acompanhamento proativo do processo',
+      'Comunicação de exigências e pendências',
+      'Repasse transparente de custos cartorários',
     ]
   },
   {
@@ -54,23 +68,10 @@ export const SERVICES: Service[] = [
     ]
   },
   {
-    id: ServiceId.ITBIRequest,
-    name: 'Emissão de ITBI',
-    description: 'Cuidamos da burocracia da emissão da guia do ITBI junto à prefeitura, agilizando a formalização da sua transação imobiliária.',
-    price: 120,
-    duration: '2-3 dias úteis',
-    features: [
-      'Cálculo e emissão da guia de ITBI',
-      'Comunicação com a Secretaria de Finanças',
-      'Agilidade para sua transação imobiliária',
-      'Evita erros e burocracia',
-    ]
-  },
-  {
     id: ServiceId.TechnicalReport,
     name: 'Parecer Técnico de Matrícula',
     description: 'Analisamos a matrícula do seu imóvel e entregamos um relatório técnico detalhado, apontando o caminho para a regularização completa.',
-    price: 99,
+    price: 199.90,
     duration: 'Até 3 dias úteis',
     features: [
       'Análise técnica da matrícula',
@@ -111,7 +112,7 @@ export const MOCK_ORDERS: Order[] = [
         isUrgent: true,
         propertyType: 'Apartamento',
         documents: [{ name: 'matricula.pdf', size: 1024 * 500, type: 'application/pdf' }],
-        total: 150,
+        total: 49.90,
         createdAt: new Date('2023-10-26T10:00:00Z'),
         updatedAt: new Date('2023-10-27T10:00:00Z'),
         paymentConfirmedAt: new Date('2023-10-26T10:05:00Z'),
@@ -130,7 +131,7 @@ export const MOCK_ORDERS: Order[] = [
         isUrgent: false,
         propertyType: 'Casa',
         documents: [{ name: 'contrato.pdf', size: 1024 * 800, type: 'application/pdf' }, { name: 'planta.jpg', size: 1024 * 1200, type: 'image/jpeg' }],
-        total: 80,
+        total: 169.90,
         createdAt: new Date('2023-10-20T10:00:00Z'),
         updatedAt: new Date('2023-10-25T15:00:00Z'),
         paymentConfirmedAt: new Date('2023-10-20T10:05:00Z'),

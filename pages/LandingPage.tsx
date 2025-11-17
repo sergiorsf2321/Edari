@@ -56,8 +56,8 @@ const LandingPage: React.FC = () => {
         [ServiceId.QualifiedSearch]: SearchIcon,
         [ServiceId.DigitalCertificate]: FileIcon,
         [ServiceId.PreAnalysis]: BriefcaseIcon,
+        [ServiceId.RegistryIntermediation]: HandshakeIcon,
         [ServiceId.DocPreparation]: FileTextIcon,
-        [ServiceId.ITBIRequest]: CheckCircleIcon,
         [ServiceId.TechnicalReport]: ScanTextIcon,
         [ServiceId.DevolutionaryNoteAnalysis]: FileSearch2Icon,
     };
@@ -71,7 +71,7 @@ const LandingPage: React.FC = () => {
     };
 
     const whyEdariItems = [
-        { icon: ShieldCheckIcon, title: "Segurança Jurídica", description: "Serviços realizados por especialistas para garantir a conformidade legal." },
+        { icon: ShieldCheckIcon, title: "Segurança", description: "Serviços realizados por especialistas para garantir a conformidade legal." },
         { icon: ClockIcon, title: "Agilidade Digital", description: "Processos 100% online para otimizar seu tempo e resolver pendências." },
         { icon: CheckCircleIcon, title: "Precisão e Clareza", description: "Informações precisas e comunicação direta para sua tranquilidade." },
         { icon: HandshakeIcon, title: "Suporte Humano e Dedicado", description: "Nossa equipe está ao seu lado do início ao fim, garantindo que você se sinta seguro em cada etapa." }

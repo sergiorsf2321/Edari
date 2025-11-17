@@ -20,12 +20,24 @@ import StatusBadge from '../components/StatusBadge';
 const AdminDashboard: React.FC = () => {
     const { orders, updateOrder, setPage, setSelectedOrder } = useAuth();
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
+    const [searchTerm, setSearchTerm] = useState('');
     const analysts = MOCK_USERS.filter(u => u.role === Role.Analyst);
 
     const filteredOrders = useMemo(() => {
-        if (filterStatus === 'ALL') return orders;
-        return orders.filter(order => order.status === filterStatus);
-    }, [orders, filterStatus]);
+        let tempOrders = orders;
+
+        if (filterStatus !== 'ALL') {
+            tempOrders = tempOrders.filter(order => order.status === filterStatus);
+        }
+
+        if (searchTerm.trim() !== '') {
+            tempOrders = tempOrders.filter(order =>
+                order.id.toLowerCase().includes(searchTerm.trim().toLowerCase())
+            );
+        }
+
+        return tempOrders;
+    }, [orders, filterStatus, searchTerm]);
 
     const assignAnalyst = (orderId: string, analystId: string) => {
         const analyst = analysts.find(a => a.id === analystId);
@@ -67,12 +79,13 @@ const AdminDashboard: React.FC = () => {
     const revenueByService = useMemo(() => {
         return orders
             .filter(order => order.status === OrderStatus.Completed)
+            // FIX: By explicitly typing the initial value of `reduce`, we ensure that `acc` is correctly
+            // inferred as `Record<string, number>`, resolving downstream type errors.
             .reduce((acc, order) => {
                 const serviceName = order.service.name;
                 if (!acc[serviceName]) {
                     acc[serviceName] = 0;
                 }
-                // FIX: Ensure order.total is a valid number before adding to prevent NaN errors.
                 if (typeof order.total === 'number') {
                     acc[serviceName] += order.total;
                 }
@@ -170,7 +183,7 @@ const AdminDashboard: React.FC = () => {
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Receita por Serviço (Concluídos)</h3>
                         <div className="space-y-3 pt-2">
                             {Object.keys(revenueByService).length > 0 ? (
-                                Object.entries(revenueByService).sort(([, a], [, b]) => b - a).map(([serviceName, total]) => (
+                                Object.entries(revenueByService).sort((a, b) => b[1] - a[1]).map(([serviceName, total]) => (
                                     <div key={serviceName} className="flex justify-between items-center text-sm">
                                         <span className="text-slate-600">{serviceName}</span>
                                         <span className="font-bold text-slate-800">
@@ -187,18 +200,27 @@ const AdminDashboard: React.FC = () => {
 
 
                 <div className="bg-white rounded-lg shadow overflow-hidden">
-                    <div className="p-4 sm:flex sm:items-center sm:justify-between border-b border-slate-200">
-                         <h3 className="text-lg font-semibold text-slate-800 mb-2 sm:mb-0">Todos os Pedidos</h3>
-                         <div className="flex items-center gap-2">
-                             <label htmlFor="status-filter" className="text-sm font-medium text-slate-600">Filtrar por status:</label>
-                             <select id="status-filter" onChange={(e) => setFilterStatus(e.target.value as OrderStatus | 'ALL')} className="p-2 border rounded-lg bg-white text-slate-900 text-sm focus:ring-brand-secondary focus:border-brand-secondary">
-                                <option value="ALL">Todos</option>
-                                <option value={OrderStatus.AwaitingQuote}>Aguard. Orçamento</option>
-                                <option value={OrderStatus.Pending}>Pendente</option>
-                                <option value={OrderStatus.InProgress}>Em Análise</option>
-                                <option value={OrderStatus.Completed}>Concluído</option>
-                                <option value={OrderStatus.Canceled}>Cancelado</option>
-                            </select>
+                    <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200">
+                         <h3 className="text-lg font-semibold text-slate-800 shrink-0">Todos os Pedidos</h3>
+                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full sm:w-auto">
+                            <input
+                                type="text"
+                                placeholder="Pesquisar por ID do Pedido"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="px-3 py-2 border rounded-lg bg-white text-slate-900 text-sm focus:ring-brand-secondary focus:border-brand-secondary w-full sm:w-56"
+                            />
+                             <div className="flex items-center gap-2 w-full sm:w-auto">
+                                 <label htmlFor="status-filter" className="text-sm font-medium text-slate-600 shrink-0">Filtrar:</label>
+                                 <select id="status-filter" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as OrderStatus | 'ALL')} className="p-2 border rounded-lg bg-white text-slate-900 text-sm focus:ring-brand-secondary focus:border-brand-secondary w-full">
+                                    <option value="ALL">Todos os Status</option>
+                                    <option value={OrderStatus.AwaitingQuote}>Aguard. Orçamento</option>
+                                    <option value={OrderStatus.Pending}>Pendente</option>
+                                    <option value={OrderStatus.InProgress}>Em Análise</option>
+                                    <option value={OrderStatus.Completed}>Concluído</option>
+                                    <option value={OrderStatus.Canceled}>Cancelado</option>
+                                </select>
+                             </div>
                          </div>
                     </div>
 
@@ -248,6 +270,12 @@ const AdminDashboard: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
+                        {filteredOrders.length === 0 && (
+                             <div className="text-center py-16">
+                                <h2 className="text-xl font-medium text-slate-700">Nenhum pedido encontrado.</h2>
+                                <p className="text-slate-500 mt-2">Tente ajustar os filtros ou o termo de busca.</p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

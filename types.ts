@@ -31,8 +31,8 @@ export enum ServiceId {
   QualifiedSearch = 'qualified_search',
   DigitalCertificate = 'digital_certificate',
   PreAnalysis = 'pre_analysis',
+  RegistryIntermediation = 'registry_intermediation', // Novo serviço
   DocPreparation = 'doc_preparation',
-  ITBIRequest = 'itbi_request',
   TechnicalReport = 'technical_report',
   DevolutionaryNoteAnalysis = 'devolutionary_note_analysis',
 }

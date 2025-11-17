@@ -87,7 +87,10 @@ const OrderFlow: React.FC = () => {
                 generatedDescription = `Solicitação de Certidão Digital\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
                 break;
             case ServiceId.PreAnalysis:
-                generatedDescription = `Solicitação de Pré-Análise e Intermediação\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nComarca: ${comarca || city}`;
+                generatedDescription = `Solicitação de Pré-Análise Documental\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nComarca: ${comarca || city}`;
+                break;
+            case ServiceId.RegistryIntermediation:
+                generatedDescription = `Intermediação Registral\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
                 break;
             case ServiceId.DocPreparation:
                 generatedDescription = `Preparação Documental\nAto Pretendido: ${intendedAct || 'Não informado'}\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
@@ -161,8 +164,8 @@ const OrderFlow: React.FC = () => {
             [ServiceId.QualifiedSearch]: ['cpfCnpj', 'state', 'city'],
             [ServiceId.DigitalCertificate]: ['state', 'city', 'registry', 'matricula'],
             [ServiceId.PreAnalysis]: ['state', 'city', 'registry'],
+            [ServiceId.RegistryIntermediation]: ['state', 'city', 'registry'],
             [ServiceId.DocPreparation]: ['intendedAct', 'state', 'city', 'registry', 'matricula'],
-            [ServiceId.ITBIRequest]: [],
             [ServiceId.TechnicalReport]: [],
             [ServiceId.DevolutionaryNoteAnalysis]: [],
         };
@@ -315,6 +318,13 @@ const OrderFlow: React.FC = () => {
                         {renderInput('comarca', 'Comarca (se diferente da cidade)', '', 'text', false)}
                     </div>
                 );
+             case ServiceId.RegistryIntermediation:
+                return (
+                    <div className="space-y-4">
+                        {renderLocationSelectors({ state: true, city: true, registry: true })}
+                        {renderInput('matricula', 'Número da Matrícula (Opcional)', '', 'text', false)}
+                    </div>
+                );
             case ServiceId.DocPreparation:
                 return (
                     <div className="space-y-4">
@@ -323,8 +333,6 @@ const OrderFlow: React.FC = () => {
                          {renderInput('matricula', 'Número da Matrícula')}
                     </div>
                 );
-            case ServiceId.ITBIRequest:
-                return <p className="text-sm text-slate-500 text-center p-4 bg-slate-50 rounded-lg">Para a emissão do ITBI, por favor, anexe o contrato ou a documentação da transação na próxima etapa e descreva os detalhes.</p>;
             case ServiceId.TechnicalReport:
                 return <p className="text-sm text-slate-500 text-center p-4 bg-slate-50 rounded-lg">Para o parecer técnico, por favor, anexe a certidão de matrícula do seu imóvel na próxima etapa.</p>;
             case ServiceId.DevolutionaryNoteAnalysis:

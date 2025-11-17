@@ -3,17 +3,14 @@ import { useAuth } from '../App';
 import { Page, Role } from '../types';
 
 // Declaração para as bibliotecas globais do Google e da Apple
-// FIX: Changed to augment the Window interface to avoid redeclaration errors.
 declare global {
-  interface Window {
-    google: any;
-    AppleID: any;
-  }
+  const google: any;
+  const AppleID: any;
 }
 
 const AppleIcon = () => (
-    <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
-        <path d="M19.39,14.73a5.3,5.3,0,0,1-2.2-3.59,4.41,4.41,0,0,1,1.1-3.28,4.78,4.78,0,0,0-3.3-1.2,5.26,5.26,0,0,0-4.3,2.43,5.33,5.33,0,0,0-4.3-2.43,5,5,0,0,0-4.4,5.15A7.82,7.82,0,0,0,5.89,20.4,5,5,0,0,0,10,22a4.8,4.8,0,0,0,4.2-2.31,4.4,4.4,0,0,0,1.1-1.35C16.29,18.06,19.39,14.73,19.39,14.73ZM13.19,6.1a3.14,3.14,0,0,1,1-2.28,3,3,0,0,0-2.3-1.12,3.13,3.13,0,0,0-2.7,1.72,3.18,3.18,0,0,0-.6,2.35A2.77,2.77,0,0,0,9,7.1,3.22,3.22,0,0,1,13.19,6.1Z" />
+    <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.09997 22C7.78997 22.05 6.79997 20.68 5.95997 19.47C4.24997 17 2.93997 12.45 4.69997 9.39C5.56997 7.87 7.12997 6.91 8.81997 6.88C10.1 6.86 11.32 7.75 12.11 7.75C12.89 7.75 14.37 6.68 15.92 6.84C16.57 6.87 18.39 7.1 19.56 8.82C19.47 8.88 17.39 10.1 17.41 12.63C17.44 15.65 20.06 16.66 20.09 16.67C20.06 16.74 19.67 18.11 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"></path>
     </svg>
 );
 
@@ -35,8 +32,7 @@ const LoginPage: React.FC = () => {
 
     const handleAppleSignIn = async () => {
         try {
-            // FIX: Use window.AppleID to access the global variable.
-            const data = await window.AppleID.auth.signIn();
+            const data = await AppleID.auth.signIn();
             loginWithApple(data.authorization.id_token);
         } catch (error) {
             console.error("Erro no login com a Apple:", error);
@@ -46,9 +42,8 @@ const LoginPage: React.FC = () => {
 
     useEffect(() => {
         // Google Sign-In
-        // FIX: Use window.google to access the global variable.
-        if (typeof window.google !== 'undefined') {
-            window.google.accounts.id.initialize({
+        if (typeof google !== 'undefined') {
+            google.accounts.id.initialize({
                 // =======================================================================
                 // ATENÇÃO, EQUIPE DE BACKEND:
                 // O Client ID abaixo é um placeholder. Ele DEVE ser substituído pelo 
@@ -60,7 +55,7 @@ const LoginPage: React.FC = () => {
             });
 
             if (googleButtonRef.current) {
-                window.google.accounts.id.renderButton(
+                google.accounts.id.renderButton(
                     googleButtonRef.current,
                     { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
                 );
@@ -70,9 +65,8 @@ const LoginPage: React.FC = () => {
         }
 
         // Apple Sign-In
-        // FIX: Use window.AppleID to access the global variable.
-        if (typeof window.AppleID !== 'undefined') {
-            window.AppleID.auth.init({
+        if (typeof AppleID !== 'undefined') {
+            AppleID.auth.init({
                 // =======================================================================
                 // ATENÇÃO, EQUIPE DE BACKEND:
                 // O Service ID (clientId) abaixo é um exemplo. Ele DEVE ser substituído 

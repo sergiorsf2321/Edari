@@ -1,12 +1,25 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../App';
 import { Order, OrderStatus, Page } from '../types';
 import StatusBadge from '../components/StatusBadge';
 
 const AnalystDashboard: React.FC = () => {
     const { user, orders, setPage, setSelectedOrder } = useAuth();
-    const assignedOrders = orders.filter(order => order.analyst?.id === user?.id);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    const assignedOrders = useMemo(() => {
+        return orders.filter(order => order.analyst?.id === user?.id);
+    }, [orders, user?.id]);
     
+    const filteredOrders = useMemo(() => {
+        if (!searchTerm.trim()) {
+            return assignedOrders;
+        }
+        return assignedOrders.filter(order =>
+            order.id.toLowerCase().includes(searchTerm.trim().toLowerCase())
+        );
+    }, [assignedOrders, searchTerm]);
+
     const handleOrderClick = (order: Order) => {
         setSelectedOrder(order);
         setPage(Page.OrderDetail);
@@ -15,7 +28,18 @@ const AnalystDashboard: React.FC = () => {
     return (
         <div className="bg-slate-50 py-12">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 className="text-3xl font-bold text-brand-primary mb-8">Pedidos Atribuídos</h1>
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                    <h1 className="text-3xl font-bold text-brand-primary">Pedidos Atribuídos</h1>
+                    <div className="relative w-full sm:w-auto">
+                        <input
+                            type="text"
+                            placeholder="Pesquisar por ID do Pedido"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full sm:w-64 px-3 py-2 border rounded-lg bg-white text-slate-900 focus:ring-brand-secondary focus:border-brand-secondary"
+                        />
+                    </div>
+                </div>
                 
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="overflow-x-auto">
@@ -30,7 +54,7 @@ const AnalystDashboard: React.FC = () => {
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-slate-200">
-                                {assignedOrders.map(order => (
+                                {filteredOrders.map(order => (
                                     <tr key={order.id} onClick={() => handleOrderClick(order)} className="cursor-pointer hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{order.id}</td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{order.client.name}</td>
@@ -43,13 +67,16 @@ const AnalystDashboard: React.FC = () => {
                                 ))}
                             </tbody>
                         </table>
+                         {filteredOrders.length === 0 && (
+                             <div className="text-center py-16">
+                                <h2 className="text-xl font-medium text-slate-700">Nenhum pedido encontrado.</h2>
+                                <p className="text-slate-500 mt-2">
+                                    {searchTerm ? "Tente ajustar sua busca." : "Não há pedidos atribuídos a você no momento."}
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
-                 {assignedOrders.length === 0 && (
-                     <div className="text-center py-16 bg-white rounded-lg shadow">
-                        <h2 className="text-xl font-medium text-slate-700">Nenhum pedido atribuído a você no momento.</h2>
-                    </div>
-                )}
             </div>
         </div>
     );

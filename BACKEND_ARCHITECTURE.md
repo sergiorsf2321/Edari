@@ -1,41 +1,48 @@
 # Instrução de Trabalho: Backend da Plataforma EDARI
 
-Este documento é o guia definitivo para a construção e implantação do backend da EDARI, garantindo uma integração perfeita com o frontend finalizado.
+## Visão Geral
+
+Este documento é o guia definitivo para a construção e implantação do backend da plataforma EDARI. O objetivo é criar uma API **robusta, segura e escalável** que servirá como a espinha dorsal para todas as operações do frontend, garantindo uma integração perfeita e uma experiência de usuário fluida.
+
+Este projeto será construído na plataforma **Render**, que hospedará tanto a aplicação backend quanto o banco de dados PostgreSQL.
 
 ## 1. Stack Tecnológico
 
+A arquitetura do backend será baseada em tecnologias modernas e consolidadas no mercado, garantindo performance e manutenibilidade.
+
 -   **Linguagem:** **TypeScript** com **Node.js**.
 -   **Framework:** **Express.js** para a criação da API RESTful.
--   **Banco de Dados:** **PostgreSQL**, hospedado na Render.
+-   **Banco de Dados:** **PostgreSQL**, hospedado na **Render**.
 -   **ORM:** **Prisma** para uma interação segura e tipada com o banco de dados.
 -   **Autenticação:** **JWT** (JSON Web Tokens) para proteger as rotas.
 -   **Hashing de Senhas:** **bcrypt** para armazenar senhas de forma segura.
+-   **Ferramentas de Desenvolvimento:** O desenvolvimento será auxiliado por ferramentas de IA de ponta, como o **Google Cloud Opus 4**, para otimização de código, geração de testes e aceleração da lógica de negócios.
 
 ---
 
 ## 2. Configuração da Infraestrutura na Render
 
-A Render será utilizada para hospedar tanto o banco de dados quanto a aplicação backend.
+A Render será a única plataforma de nuvem utilizada.
 
 ### Passo 2.1: Criar o Banco de Dados (Render Postgres)
 
-1.  No seu dashboard da Render, clique em **"New +"** e selecione **"PostgreSQL"**.
-2.  Dê um nome para a sua instância (ex: `edari-db`), escolha a região e a versão do Postgres.
-3.  Após a criação, a Render fornecerá várias strings de conexão na aba **"Info"** do seu banco de dados. Copie o valor de **"Internal Connection URL"**. Esta é a URL que sua aplicação usará para se conectar ao banco.
+1.  No dashboard da Render, clique em **"New +"** e selecione **"PostgreSQL"**.
+2.  Dê um nome para a instância (ex: `edari-db`), escolha a região mais próxima de seus usuários e a versão mais recente do Postgres.
+3.  Após a criação, copie a string de conexão da aba **"Info"** -> **"Internal Connection URL"**. Esta é a URL que a aplicação usará para se conectar ao banco de dados.
 
 ### Passo 2.2: Deploy do Backend (Render Web Service)
 
 1.  Clique em **"New +"** e selecione **"Web Service"**.
-2.  Conecte o repositório do seu backend (GitHub, GitLab, etc.).
+2.  Conecte o repositório do seu backend.
 3.  **Configurações do Serviço:**
-    -   **Name:** Dê um nome para o serviço (ex: `edari-api`).
+    -   **Name:** `edari-api`.
     -   **Environment:** Node.
-    -   **Build Command:** `npm install && npx prisma generate && npx prisma migrate deploy && npm run build` (Ajuste `npm run build` se seu script de compilação TypeScript for diferente).
-    -   **Start Command:** `npm start`.
-4.  **Variáveis de Ambiente:**
-    -   Vá para a aba **"Environment"**.
-    -   Crie uma variável chamada `DATABASE_URL` (ou `POSTGRES_PRISMA_URL`, o que preferir) e cole a **"Internal Connection URL"** do seu banco de dados.
-    -   Adicione outras variáveis necessárias, como `JWT_SECRET`, `MERCADO_PAGO_ACCESS_TOKEN`, etc.
+    -   **Build Command:** `npm install && npx prisma generate && npm run build` (Assumindo que `npm run build` compila o TypeScript para JavaScript).
+    -   **Start Command:** `npx prisma migrate deploy && npm start`. O `migrate deploy` garante que as migrações sejam aplicadas a cada novo deploy.
+4.  **Variáveis de Ambiente (em "Environment"):**
+    -   `DATABASE_URL`: Cole a **"Internal Connection URL"** do seu banco de dados.
+    -   `JWT_SECRET`: Crie um segredo forte e único para assinar os tokens JWT.
+    -   `MERCADO_PAGO_ACCESS_TOKEN`: Seu token de produção do Mercado Pago.
 
 ---
 
@@ -77,7 +84,7 @@ model Service {
   description String
   price       Float?
   duration    String
-  features    Json
+  features    Json     // Armazena a lista de features como um JSON array
   orders      Order[]
 }
 
@@ -113,7 +120,7 @@ model Message {
   attachment Json?    // { name, url, size, type }
   
   order     Order  @relation(fields: [orderId], references: [id])
-  orderId   String
+  orderId  String
 
   sender    User   @relation(fields: [senderId], references: [id])
   senderId  String
@@ -136,124 +143,81 @@ enum OrderStatus {
 
 ---
 
-## 4. Guia de Implementação dos Endpoints da API
+## 4. Seeding de Dados Iniciais
 
-Crie rotas claras e protegidas por um middleware de autenticação JWT (exceto para rotas de login/registro).
+A tabela `Service` **deve ser populada** com os dados dos serviços oferecidos. Crie um script de seed do Prisma (`prisma/seed.ts`) para inserir os dados iniciais. **A fonte da verdade para os dados dos serviços (nomes, preços, descrições, etc.) é o arquivo `constants.ts` do frontend.** Garanta que o seu script de seed reflita fielmente os dados deste arquivo, incluindo todas as atualizações de preços e novos serviços.
+
+**Exemplo (`prisma/seed.ts`):**
+```typescript
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+// IMPORTANTE: Os dados abaixo devem ser mantidos em sincronia com 'frontend/constants.ts'
+const services = [
+  {
+    serviceId: 'qualified_search',
+    name: 'Pesquisa Qualificada',
+    description: 'Localizamos imóveis em nome de pessoas físicas ou jurídicas...',
+    price: 49.90,
+    duration: 'Até 5 dias úteis',
+    features: [
+      'Busca por CPF ou CNPJ',
+      'Retorna até 10 matrículas por pesquisa',
+      // ...
+    ]
+  },
+  // ... adicione todos os outros serviços aqui
+];
+
+async function main() {
+  console.log('Start seeding...');
+  for (const service of services) {
+    const s = await prisma.service.upsert({
+      where: { serviceId: service.serviceId },
+      update: service, // Garante que os dados sejam atualizados se já existirem
+      create: service,
+    });
+    console.log(`Upserted service ${s.name}`);
+  }
+  console.log('Seeding finished.');
+}
+
+main()
+  .catch((e) => { console.error(e); process.exit(1); })
+  .finally(async () => { await prisma.$disconnect(); });
+```
+Adicione `"prisma": { "seed": "ts-node prisma/seed.ts" }` ao seu `package.json`.
+
+---
+
+## 5. Guia de Implementação dos Endpoints da API
+
+Crie rotas claras e protegidas por um middleware de autenticação JWT (exceto para rotas públicas de login/registro).
 
 ### Autenticação (`/api/auth`)
 
 -   `POST /register`: Cria um novo cliente. Hash da senha com `bcrypt`.
--   `POST /login`: Autentica um usuário (cliente, analista, admin). Retorna um JWT.
+-   `POST /login`: Autentica um usuário. Retorna um JWT.
 -   `POST /google-signin`:
     -   **Recebe:** `{ "googleToken": "..." }`.
     -   **Ação:** Valide o token usando `google-auth-library`. Busque o usuário pelo e-mail. Se não existir, crie um novo (`role: CLIENT`, `isVerified: true`). Gere e retorne um JWT da **sua aplicação**.
 -   `POST /apple-signin`:
     -   **Recebe:** `{ "appleToken": "..." }`.
-    -   **Ação:** Valide o token contra as chaves públicas da Apple. Extraia o e-mail. Busque o usuário. Se não existir, crie um novo (`role: CLIENT`, `isVerified: true`). Gere e retorne um JWT da **sua aplicação**.
+    -   **Ação:** Valide o token contra as chaves públicas da Apple. Extraia o e-mail. Busque o usuário. Se não existir, crie um novo. Gere e retorne um JWT da **sua aplicação**.
 
 ### Outros Endpoints
 
 -   **Serviços (`/api/services`):** `GET /` para listar todos.
 -   **Pedidos (`/api/orders`):**
     -   `POST /`: Criar novo pedido (requer JWT de cliente).
-    -   `GET /`: Listar pedidos com base no perfil (cliente, analista, admin).
-    -   `GET /:id`: Detalhes de um pedido (verificar permissão).
-    -   `POST /:id/messages`: Enviar mensagem no chat do pedido.
-    -   `PUT /:id/assign`: Admin atribui analista.
-    -   `POST /:id/quote`: Admin/Analista envia orçamento.
-    -   `PUT /:id/status`: Muda o status do pedido.
+    -   `GET /`: Listar pedidos. A rota deve suportar query parameters para filtragem, como `?status=IN_PROGRESS` e `?search=ORD-001`. Clientes veem apenas os seus pedidos, enquanto analistas e administradores podem ver todos (ou os atribuídos, no caso dos analistas). A busca por `search` deve ser uma busca parcial (case-insensitive) no ID do pedido.
+    -   `GET /:id`: Obter detalhes de um pedido.
+    -   `PUT /:id`: Atualizar um pedido (ex: atribuir analista, mudar status).
+-   **Mensagens (`/api/orders/:id/messages`):**
+    -   `POST /`: Enviar uma nova mensagem em um pedido.
+-   **Pagamentos (`/api/payments`):**
+    -   `POST /pix`: Cria uma ordem de pagamento PIX no Mercado Pago e retorna os dados.
+    -   `POST /card`: Processa um pagamento com cartão (recebendo o `card_token` do frontend).
+    -   `POST /webhook`: Rota para receber webhooks do Mercado Pago e atualizar o status do pedido no banco de dados.
 
----
-
-## 5. Instrução de Trabalho: Integração com Mercado Pago
-
-Siga este fluxo para garantir segurança e conformidade.
-
-**Passo 1: Configuração Inicial**
-1.  Crie uma conta no Mercado Pago e obtenha seu **Access Token** de produção.
-2.  Adicione o token às variáveis de ambiente do seu serviço na Render como `MERCADO_PAGO_ACCESS_TOKEN`.
-3.  Instale o SDK oficial: `npm install mercadopago`.
-4.  Configure o SDK no seu código:
-    ```typescript
-    import mercadopago from 'mercadopago';
-    mercadopago.configure({ access_token: process.env.MERCADO_PAGO_ACCESS_TOKEN! });
-    ```
-
-**Passo 2: Pagamento com Cartão de Crédito (Seguro)**
-O frontend é responsável por tokenizar os dados do cartão. O backend **NUNCA** deve receber o número do cartão.
-
-1.  **Frontend:** Usa o SDK `MercadoPago.js V2` para coletar dados do cartão e gerar um `cardToken`.
-2.  **Backend (`POST /api/payments/card`):**
-    -   **Recebe:** `{ "orderId": "...", "token": "CARD_TOKEN_GERADO", "installments": 1, "payment_method_id": "visa", ... }`.
-    -   **Ação:**
-        -   Valide o `orderId` e verifique se o usuário logado é o dono.
-        -   Chame a API do Mercado Pago usando o `token`:
-          ```typescript
-          const paymentResponse = await mercadopago.payment.create({
-            transaction_amount: order.total,
-            token: req.body.token,
-            installments: req.body.installments,
-            description: order.service.name,
-            payer: { email: user.email }
-          });
-          ```
-    -   **Se `paymentResponse.body.status === 'approved'`:**
-        -   Atualize o status do pedido no seu banco para `IN_PROGRESS`.
-        -   Atualize o campo `paymentConfirmedAt`.
-        -   Retorne sucesso para o frontend.
-
-**Passo 3: Pagamento com PIX**
-1.  **Backend (`POST /api/payments/pix`):**
-    -   **Recebe:** `{ "orderId": "..." }`.
-    -   **Ação:**
-        -   Valide o `orderId`.
-        -   Crie a preferência de pagamento PIX:
-          ```typescript
-          const response = await mercadopago.payment.create({
-            transaction_amount: order.total,
-            description: order.service.name,
-            payment_method_id: 'pix',
-            payer: { email: user.email }
-          });
-          
-          const qrCodeBase64 = response.body.point_of_interaction.transaction_data.qr_code_base64;
-          const pixCopyPaste = response.body.point_of_interaction.transaction_data.qr_code;
-          ```
-    -   **Retorna:** `{ qrCodeUrl: `data:image/png;base64,${qrCodeBase64}`, pixCopyPaste }`.
-
-**Passo 4: Webhooks (Essencial para Confirmação)**
-Webhooks são cruciais para confirmar pagamentos que não são instantâneos (como PIX).
-
-1.  **Configuração:** No painel do Mercado Pago, configure um endpoint de Webhook apontando para `https://sua-api.onrender.com/api/webhooks/mercado-pago`.
-2.  **Backend (`POST /api/webhooks/mercado-pago`):**
-    -   **Recebe:** Notificação do Mercado Pago, ex: `{ "type": "payment", "data": { "id": "12345" } }`.
-    -   **Ação (IMPORTANTE):**
-        1.  Receba a notificação e responda **imediatamente** com status `200 OK`.
-        2.  **NÃO CONFIE no payload do webhook.** Apenas extraia o ID do pagamento (`data.id`).
-        3.  Faça uma chamada GET segura de volta à API do Mercado Pago para obter o status real: `mercadopago.payment.findById(data.id)`.
-        4.  Se o status retornado for `approved`, encontre o pedido no seu banco de dados e atualize seu status para `IN_PROGRESS` e `paymentConfirmedAt`.
-
----
-
-## 6. Instrução de Trabalho: Upload de Arquivos
-
-Utilize **URLs Pré-Assinadas** com um serviço de armazenamento de objetos como **AWS S3** ou **Cloudflare R2** (alternativa mais barata e compatível).
-
-**Fluxo de Upload:**
-
-1.  **Frontend:** Antes de fazer upload, solicita uma URL segura ao backend.
-    -   `POST /api/orders/:id/generate-upload-url` com `{ "fileName": "matricula.pdf", "fileType": "application/pdf" }`.
-
-2.  **Backend:**
-    -   Verifica se o usuário tem permissão para o pedido.
-    -   Usa o SDK do serviço de nuvem (ex: `aws-sdk`) para gerar uma URL de upload de curta duração (ex: 5 minutos) que permite uma requisição `PUT`.
-    -   Retorna `{ uploadUrl: "https://s3-ou-r2...", fileUrl: "https://caminho-publico..." }`.
-
-3.  **Frontend:**
-    -   Recebe a `uploadUrl`.
-    -   Faz uma requisição `PUT` **diretamente para essa URL** com o arquivo como corpo da requisição. O upload vai do navegador para o S3/R2, sem sobrecarregar seu servidor.
-
-4.  **Backend (Associação do Arquivo):**
-    -   Após o upload, o frontend informa ao backend que o arquivo está disponível. Isso pode ser feito ao enviar uma nova mensagem no chat.
-    -   `POST /api/orders/:id/messages` com `{ "content": "Segue o anexo", "attachment": { "name": "...", "url": "https://caminho-publico...", ... } }`.
-    -   O backend salva a `url` do arquivo no banco de dados, associada à mensagem e/ou ao pedido.
+**Este documento serve como a versão final de requisitos para o desenvolvimento do backend. Qualquer dúvida, consulte a equipe de frontend.**

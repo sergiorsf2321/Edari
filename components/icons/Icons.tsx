@@ -21,6 +21,7 @@ import {
     Paperclip as PaperclipIcon,
     Send as SendIcon,
     Download as DownloadIcon,
+    // FIX: Import LifeBuoy as LifeBuoyIcon
     LifeBuoy as LifeBuoyIcon,
     Handshake as HandshakeIcon,
     ScanText as ScanTextIcon,
@@ -51,6 +52,7 @@ export {
     PaperclipIcon,
     SendIcon,
     DownloadIcon,
+    // FIX: Export the aliased LifeBuoyIcon
     LifeBuoyIcon,
     HandshakeIcon,
     ScanTextIcon,
