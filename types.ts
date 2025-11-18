@@ -98,20 +98,27 @@ export interface PixResponse {
     pixCopyPaste: string;
 }
 
+export interface Notification {
+  id: number;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
 export interface AuthContextType {
   user: User | null;
-  login: (email: string, role: Role) => void;
-  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string) => void;
+  login: (email: string, role: Role) => Promise<boolean>;
+  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string) => Promise<void>;
   verifyUser: (email: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   page: Page;
   setPage: (page: Page) => void;
-  loginWithGoogle: (googleToken: string) => void;
-  loginWithApple: (appleToken: string) => void;
+  loginWithGoogle: (googleToken: string) => Promise<void>;
+  loginWithApple: (appleToken: string) => Promise<void>;
   orders: Order[];
   selectedOrder: Order | null;
   setSelectedOrder: (order: Order | null) => void;
   updateOrder: (updatedOrder: Order) => void;
   addOrder: (newOrderData: Omit<Order, 'id'>) => void;
   lastRegisteredEmail: string | null;
+  addNotification: (message: string, type: 'success' | 'error' | 'info') => void;
 }

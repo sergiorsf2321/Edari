@@ -89,7 +89,7 @@ const LandingPage: React.FC = () => {
                 <div className="max-w-6xl mx-auto relative z-10">
                     <div className="text-center">
                         <h1 className={`text-4xl md:text-6xl font-extrabold mb-4 tracking-tight transition-all duration-1000 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
-                          <span className="logo-sheen inline-block">A clareza que seu imóvel <span className="text-brand-accent">precisa</span>. A <span className="text-brand-accent">segurança</span> que <span className="text-brand-accent">você</span> merece.</span>
+                          <span className="logo-sheen inline-block">A regularização que seu imóvel <span className="text-brand-accent">precisa</span>. A <span className="text-brand-accent">segurança</span> que <span className="text-brand-accent">você</span> merece.</span>
                         </h1>
                         <p className={`text-xl md:text-2xl text-blue-200 max-w-3xl mx-auto mb-8 transition-all duration-1000 ease-out delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>Da pesquisa em cartórios à intermediação de protocolo na plataforma ONR, análises documentais e preparação de processos completos, garantimos a conformidade e a valorização do seu patrimônio.</p>
                         <button 

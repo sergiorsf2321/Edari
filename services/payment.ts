@@ -1,4 +1,3 @@
-// FIX: Corrected import typo from PIX_QR_CODE_BASE_64 to PIX_QR_CODE_BASE64.
 import { PIX_QR_CODE_BASE64 } from "../assets";
 import { Service, User, CardDetails, PixResponse } from "../types";
 

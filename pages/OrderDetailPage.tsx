@@ -5,6 +5,7 @@ import { MOCK_USERS } from '../constants';
 import { DownloadIcon, FileIcon, PaperclipIcon, SendIcon, TrashIcon } from '../components/icons/Icons';
 import StatusBadge from '../components/StatusBadge';
 import Payment from '../components/Payment';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const calculateCompletionDate = (startDate: Date, durationString: string): string => {
     if (durationString.toLowerCase().includes('personalizado')) {
@@ -31,18 +32,50 @@ const calculateCompletionDate = (startDate: Date, durationString: string): strin
 };
 
 const OrderDetailPage: React.FC = () => {
-    const { user, selectedOrder, updateOrder, setPage, setSelectedOrder } = useAuth();
+    const { user, selectedOrder, updateOrder, setPage, setSelectedOrder, addNotification } = useAuth();
     const [newMessage, setNewMessage] = useState('');
     const [attachment, setAttachment] = useState<UploadedFile | null>(null);
     const [quoteValue, setQuoteValue] = useState<number | string>('');
     const [showPaymentForm, setShowPaymentForm] = useState(false);
+    const [isSending, setIsSending] = useState(false);
+    const [isAnalystTyping, setIsAnalystTyping] = useState(false);
     
     const chatEndRef = useRef<HTMLDivElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [selectedOrder?.messages]);
+    }, [selectedOrder?.messages, isAnalystTyping]);
+    
+    // Simulate analyst typing and replying
+    useEffect(() => {
+        if (!user || !selectedOrder || isAnalystTyping) return;
+
+        const lastMessage = selectedOrder.messages[selectedOrder.messages.length - 1];
+        const isClientLastSender = lastMessage && lastMessage.sender.id === user.id;
+
+        if (isClientLastSender && selectedOrder.analyst && selectedOrder.status === OrderStatus.InProgress) {
+            const typingTimer = setTimeout(() => {
+                setIsAnalystTyping(true);
+            }, 1000);
+
+            const replyTimer = setTimeout(() => {
+                const reply: Message = {
+                    id: `msg-${Date.now()}`,
+                    sender: selectedOrder.analyst!,
+                    content: "Recebido. Estou verificando as informações e retorno em breve.",
+                    createdAt: new Date(),
+                };
+                updateOrder({ ...selectedOrder, messages: [...selectedOrder.messages, reply] });
+                setIsAnalystTyping(false);
+            }, 3500);
+
+            return () => {
+                clearTimeout(typingTimer);
+                clearTimeout(replyTimer);
+            };
+        }
+    }, [selectedOrder, user, updateOrder, isAnalystTyping]);
 
     if (!user || !selectedOrder) {
         return (
@@ -59,8 +92,11 @@ const OrderDetailPage: React.FC = () => {
         ? calculateCompletionDate(selectedOrder.paymentConfirmedAt, selectedOrder.service.duration)
         : null;
 
-    const handleSendMessage = () => {
-        if (newMessage.trim() === '' && !attachment) return;
+    const handleSendMessage = async () => {
+        if ((newMessage.trim() === '' && !attachment) || isSending) return;
+
+        setIsSending(true);
+        await new Promise(res => setTimeout(res, 500));
 
         const message: Message = { 
             id: `msg-${Date.now()}`, 
@@ -83,12 +119,14 @@ const OrderDetailPage: React.FC = () => {
 
         setNewMessage('');
         setAttachment(null);
+        setIsSending(false);
     };
 
     const handleAssignAnalyst = (analystId: string) => {
         const analyst = analysts.find(a => a.id === analystId);
         if (!analyst) return;
         updateOrder({ ...selectedOrder, analyst, status: OrderStatus.InProgress, updatedAt: new Date() });
+        addNotification(`Analista ${analyst.name} atribuído com sucesso.`, 'success');
     };
     
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,11 +144,10 @@ const OrderDetailPage: React.FC = () => {
         fileInputRef.current?.click();
     };
 
-
     const handleSendQuote = () => {
         const value = parseFloat(String(quoteValue));
         if (isNaN(value) || value <= 0) {
-            alert("Por favor, insira um valor de orçamento válido.");
+            addNotification("Por favor, insira um valor de orçamento válido.", 'error');
             return;
         }
         const message: Message = { 
@@ -127,6 +164,7 @@ const OrderDetailPage: React.FC = () => {
             updatedAt: new Date() 
         });
         setQuoteValue('');
+        addNotification("Orçamento enviado ao cliente.", 'success');
     };
 
     const handlePaymentSuccess = () => {
@@ -145,15 +183,17 @@ const OrderDetailPage: React.FC = () => {
             updatedAt: new Date(),
             paymentConfirmedAt: new Date(),
         });
+        addNotification("Pagamento confirmado com sucesso!", "success");
+        setShowPaymentForm(false);
     };
 
     const handleCancelOrder = () => {
         if (window.confirm("Você tem certeza que deseja desistir desta solicitação? Esta ação não pode ser desfeita.")) {
             updateOrder({ ...selectedOrder, status: OrderStatus.Canceled, updatedAt: new Date() });
+            addNotification("Sua solicitação foi cancelada.", "info");
             setPage(Page.Dashboard);
         }
     };
-
 
     return (
         <div className="bg-slate-50 py-12">
@@ -181,8 +221,8 @@ const OrderDetailPage: React.FC = () => {
                                  )}
                                  <div className="flex justify-between items-center">
                                      <span className="text-slate-500">Analista:</span>
-                                     {user.role === Role.Admin && !selectedOrder.analyst ? (
-                                         <select onChange={(e) => handleAssignAnalyst(e.target.value)} className="text-xs p-1 border rounded bg-white text-slate-900" defaultValue="">
+                                     {user.role === Role.Admin && (selectedOrder.status === OrderStatus.Pending || selectedOrder.status === OrderStatus.InProgress) ? (
+                                         <select onChange={(e) => handleAssignAnalyst(e.target.value)} className="text-xs p-1 border rounded bg-white text-slate-900" value={selectedOrder.analyst?.id || ""}>
                                              <option value="" disabled>Atribuir...</option>
                                              {analysts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
                                          </select>
@@ -301,6 +341,18 @@ const OrderDetailPage: React.FC = () => {
                                     </div>
                                 </div>
                             ))}
+                            {isAnalystTyping && (
+                                <div className="flex gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-slate-300 flex items-center justify-center font-bold text-white text-sm shrink-0">{selectedOrder.analyst?.name.charAt(0)}</div>
+                                    <div className="p-3 rounded-lg bg-slate-200 text-slate-800">
+                                        <div className="flex items-center gap-2">
+                                            <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                                            <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                                            <span className="h-2 w-2 bg-slate-400 rounded-full animate-bounce"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                             {selectedOrder.messages.length === 0 && <p className="text-sm text-slate-500 text-center py-8">Inicie a conversa com o seu cliente ou analista.</p>}
                             <div ref={chatEndRef} />
                         </div>
@@ -329,13 +381,14 @@ const OrderDetailPage: React.FC = () => {
                                         placeholder="Digite sua mensagem..."
                                         className="w-full p-2 border rounded-lg bg-white text-slate-900 resize-none"
                                         rows={1}
+                                        disabled={isSending}
                                     />
                                     <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
-                                    <button onClick={handleAttachmentClick} className="p-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300" title="Anexar Documento">
+                                    <button onClick={handleAttachmentClick} className="p-3 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300" title="Anexar Documento" disabled={isSending}>
                                         <PaperclipIcon className="h-6 w-6"/>
                                     </button>
-                                    <button onClick={handleSendMessage} className="p-3 bg-brand-accent text-white rounded-lg hover:opacity-90">
-                                        <SendIcon className="h-6 w-6"/>
+                                    <button onClick={handleSendMessage} className="p-3 bg-brand-accent text-white rounded-lg hover:opacity-90 flex items-center justify-center w-[52px] h-[52px]" disabled={isSending}>
+                                        {isSending ? <LoadingSpinner size="sm" /> : <SendIcon className="h-6 w-6"/>}
                                     </button>
                                 </div>
                                 </>

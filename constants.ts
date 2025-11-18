@@ -6,7 +6,7 @@ export const SERVICES: Service[] = [
     name: 'Pesquisa Qualificada',
     description: 'Localizamos imóveis em nome de pessoas físicas ou jurídicas, buscando por CPF/CNPJ nos cartórios de registro de imóveis.',
     price: 49.90,
-    duration: 'Até 5 dias úteis',
+    duration: 'Até 6 dias úteis',
     features: [
       'Busca por CPF ou CNPJ',
       'Retorna até 10 matrículas por pesquisa',
@@ -19,7 +19,7 @@ export const SERVICES: Service[] = [
     name: 'Certidão Digital',
     description: 'Solicitamos a certidão de matrícula oficial e digital do seu imóvel, com validade jurídica de 30 dias para qualquer transação.',
     price: 169.90,
-    duration: 'Até 5 dias úteis',
+    duration: 'Até 6 dias úteis',
     features: [
       'Documento oficial com validade jurídica',
       'Assinatura eletrônica do cartório',
@@ -72,7 +72,7 @@ export const SERVICES: Service[] = [
     name: 'Parecer Técnico de Matrícula',
     description: 'Analisamos a matrícula do seu imóvel e entregamos um relatório técnico detalhado, apontando o caminho para a regularização completa.',
     price: 199.90,
-    duration: 'Até 3 dias úteis',
+    duration: 'Até 4 dias úteis',
     features: [
       'Análise técnica da matrícula',
       'Identificação de pendências registrais',

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { CardDetails, Order } from '../types';
 import { generatePixPayment, processCreditCardPayment } from '../services/payment';
 import { useAuth } from '../App';
+import LoadingSpinner from './LoadingSpinner';
 
 interface PaymentProps {
     order: Order;
@@ -15,7 +16,7 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
     const [pixQrCodeUrl, setPixQrCodeUrl] = useState<string | null>(null);
     const [cardDetails, setCardDetails] = useState<CardDetails>({ number: '', name: '', expiry: '', cvc: '' });
     const [installments, setInstallments] = useState(1);
-    const { user } = useAuth();
+    const { user, addNotification } = useAuth();
     
     const total = order.total;
 
@@ -28,7 +29,7 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
             setPixQrCodeUrl(response.qrCodeUrl);
         } catch (error) {
             console.error(error);
-            alert('Falha ao gerar o PIX. Tente novamente.');
+            addNotification('Falha ao gerar o PIX. Tente novamente.', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -43,7 +44,7 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
             onPaymentSuccess();
         } catch (error) {
             console.error(error);
-            alert('Pagamento com cartão falhou. Verifique os dados e tente novamente.');
+            addNotification('Pagamento com cartão falhou. Verifique os dados.', 'error');
         } finally {
             setIsLoading(false);
         }
@@ -70,6 +71,13 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
             setCardDetails(prev => ({ ...prev, cvc: value }));
         }
     };
+
+    const handleCopyToClipboard = () => {
+        if (pixCopyPasteCode) {
+            navigator.clipboard.writeText(pixCopyPasteCode);
+            addNotification('Código PIX copiado para a área de transferência!', 'success');
+        }
+    };
     
     const paymentOptions = [ { id: 'CARD', label: 'Cartão de Crédito' }, { id: 'PIX', label: 'PIX' }];
 
@@ -83,6 +91,7 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
                         type="button"
                         onClick={() => setPaymentMethod(opt.id as 'CARD' | 'PIX')}
                         className={`flex-1 p-4 border-2 rounded-lg font-bold transition-colors ${paymentMethod === opt.id ? 'border-brand-secondary bg-blue-50 text-brand-primary' : 'border-slate-200 bg-white hover:border-slate-300'}`}
+                        disabled={isLoading}
                     >
                         {opt.label}
                     </button>
@@ -91,7 +100,7 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
             <div className="mt-6 p-6 bg-slate-100 rounded-lg min-h-[250px]">
                 {paymentMethod === 'CARD' && (
                     <form id="creditCardForm" onSubmit={handleCreditCardSubmit}>
-                        <div className="space-y-4">
+                        <fieldset disabled={isLoading} className="space-y-4">
                             <div>
                                 <label className="text-sm font-medium text-slate-700">Nome no Cartão</label>
                                 <input type="text" value={cardDetails.name} onChange={e => setCardDetails(prev => ({ ...prev, name: e.target.value }))} className="w-full p-2 border rounded-lg mt-1 bg-white" required />
@@ -145,12 +154,12 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
                                     })}
                                 </select>
                             </div>
-                        </div>
+                        </fieldset>
                     </form>
                 )}
                  {paymentMethod === 'PIX' && (
-                    <div className="text-center">
-                        {isLoading && <p>Gerando código PIX...</p>}
+                    <div className="text-center flex flex-col justify-center items-center h-full">
+                        {isLoading && <LoadingSpinner />}
                         {!isLoading && !pixCopyPasteCode && (
                             <button onClick={handleGeneratePix} className="bg-brand-secondary text-white font-bold py-3 px-6 rounded-lg">
                                 Gerar PIX
@@ -163,7 +172,7 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
                                 <div className="bg-white p-2 border rounded-lg text-sm text-slate-700 break-all">
                                     <code>{pixCopyPasteCode}</code>
                                 </div>
-                                <button onClick={() => navigator.clipboard.writeText(pixCopyPasteCode)} className="mt-3 bg-slate-200 text-slate-800 text-sm font-bold py-2 px-4 rounded-lg">
+                                <button onClick={handleCopyToClipboard} className="mt-3 bg-slate-200 text-slate-800 text-sm font-bold py-2 px-4 rounded-lg">
                                     Copiar Código
                                 </button>
                                  <p className="mt-4 text-xs text-slate-500">Após o pagamento, clique em "Finalizar Pedido" para confirmar.</p>
@@ -174,8 +183,8 @@ const Payment: React.FC<PaymentProps> = ({ order, onPaymentSuccess }) => {
             </div>
              <div className="mt-8 flex justify-end">
                  {paymentMethod === 'CARD' ? (
-                    <button type="submit" form="creditCardForm" disabled={isLoading} className="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 disabled:bg-slate-400">
-                        {isLoading ? 'Processando...' : `Confirmar Pagamento de R$ ${total.toFixed(2).replace('.', ',')}`}
+                    <button type="submit" form="creditCardForm" disabled={isLoading} className="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 disabled:bg-slate-400 flex justify-center items-center min-w-[120px] h-[48px]">
+                        {isLoading ? <LoadingSpinner /> : `Pagar R$ ${total.toFixed(2).replace('.', ',')}`}
                     </button>
                  ) : (
                      <button type="button" onClick={onPaymentSuccess} disabled={!pixCopyPasteCode} className="bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 disabled:bg-slate-400">

@@ -4,7 +4,8 @@ import { SERVICES, MOCK_USERS } from '../constants';
 import { Service, UploadedFile, Page, ServiceId, Order, OrderStatus } from '../types';
 import { UploadIcon, FileIcon, TrashIcon, CheckCircleIcon } from '../components/icons/Icons';
 import Payment from '../components/Payment';
-import { BRAZILIAN_STATES, CITIES_BY_STATE, REGISTRIES_BY_CITY } from '../data/locations';
+import { BRAZILIAN_STATES, CITIES_BY_STATE } from '../data/locations';
+import { findRegistriesByCity } from '../services/registryService';
 
 const OrderFlow: React.FC = () => {
     const [step, setStep] = useState(1);
@@ -12,6 +13,8 @@ const OrderFlow: React.FC = () => {
     // Step 1 State
     const [selectedService, setSelectedService] = useState<Service | null>(null);
     const [serviceSpecificData, setServiceSpecificData] = useState<Record<string, string>>({});
+    const [registries, setRegistries] = useState<string[]>([]);
+    const [isLoadingRegistries, setIsLoadingRegistries] = useState(false);
 
     // Step 2 State
     const [files, setFiles] = useState<UploadedFile[]>([]);
@@ -22,6 +25,30 @@ const OrderFlow: React.FC = () => {
     useEffect(() => {
         window.scrollTo(0, 0);
     }, []);
+
+    const selectedCity = serviceSpecificData.city;
+    const selectedState = serviceSpecificData.state;
+
+    useEffect(() => {
+        if (selectedCity && selectedState) {
+            const fetchRegistries = async () => {
+                setIsLoadingRegistries(true);
+                setServiceSpecificData(prev => ({ ...prev, registry: '' })); // Clear previous selection
+                try {
+                    const foundRegistries = await findRegistriesByCity(selectedState, selectedCity);
+                    setRegistries(foundRegistries);
+                } catch (error) {
+                    console.error("Failed to fetch registries:", error);
+                    setRegistries([`Cartório de Registro de Imóveis de ${selectedCity}`]); // Fallback
+                } finally {
+                    setIsLoadingRegistries(false);
+                }
+            };
+            fetchRegistries();
+        } else {
+            setRegistries([]);
+        }
+    }, [selectedCity, selectedState]);
 
     const total = useMemo(() => {
         if (!selectedService || selectedService.price === null) return 0;
@@ -257,10 +284,7 @@ const OrderFlow: React.FC = () => {
             </div>
         );
 
-        const selectedState = serviceSpecificData.state;
-        const selectedCity = serviceSpecificData.city;
         const citiesForState = selectedState ? CITIES_BY_STATE[selectedState] || [] : [];
-        const registriesForCity = selectedCity ? (REGISTRIES_BY_CITY[selectedCity] || [`Cartório de Registro de Imóveis de ${selectedCity}`]) : [];
     
         const renderLocationSelectors = (config: { state?: boolean, city?: boolean, registry?: boolean }) => (
             <>
@@ -285,10 +309,17 @@ const OrderFlow: React.FC = () => {
                 {config.registry && (
                      <div>
                         <label htmlFor="registry" className="block text-sm font-medium mb-1">Cartório de Registro de Imóveis</label>
-                        <select id="registry" name="registry" value={serviceSpecificData.registry || ''} onChange={handleServiceDataChange} className={commonFields} disabled={!selectedCity || registriesForCity.length === 0} required>
-                            <option value="" disabled>Selecione um cartório</option>
-                            {registriesForCity.map(registry => <option key={registry} value={registry}>{registry}</option>)}
+                        <select id="registry" name="registry" value={serviceSpecificData.registry || ''} onChange={handleServiceDataChange} className={commonFields} disabled={!selectedCity || isLoadingRegistries || registries.length === 0} required>
+                            {isLoadingRegistries ? (
+                                <option>Buscando cartórios...</option>
+                            ) : (
+                                <>
+                                    <option value="" disabled>Selecione um cartório</option>
+                                    {registries.map(registry => <option key={registry} value={registry}>{registry}</option>)}
+                                </>
+                            )}
                         </select>
+                        {isLoadingRegistries && <div className="text-xs text-slate-500 mt-1 animate-pulse">Simulando busca no sistema do CNJ...</div>}
                     </div>
                 )}
             </>

@@ -4,15 +4,14 @@ import { Page } from '../types';
 import { MailCheckIcon } from '../components/icons/Icons';
 
 const EmailConfirmationPage: React.FC = () => {
-    const { verifyUser, setPage, lastRegisteredEmail } = useAuth();
+    const { verifyUser, setPage, lastRegisteredEmail, addNotification } = useAuth();
 
     const handleConfirm = () => {
         if (lastRegisteredEmail) {
             verifyUser(lastRegisteredEmail);
-            alert('E-mail confirmado com sucesso! Você já pode fazer login.');
             setPage(Page.Login);
         } else {
-            alert('Ocorreu um erro. Por favor, tente se cadastrar novamente.');
+            addNotification('Ocorreu um erro. Por favor, tente se cadastrar novamente.', 'error');
             setPage(Page.Signup);
         }
     };

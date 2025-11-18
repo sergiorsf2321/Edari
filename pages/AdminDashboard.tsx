@@ -18,7 +18,7 @@ import {
 import StatusBadge from '../components/StatusBadge';
 
 const AdminDashboard: React.FC = () => {
-    const { orders, updateOrder, setPage, setSelectedOrder } = useAuth();
+    const { orders, updateOrder, setPage, setSelectedOrder, addNotification } = useAuth();
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     const analysts = MOCK_USERS.filter(u => u.role === Role.Analyst);
@@ -47,6 +47,7 @@ const AdminDashboard: React.FC = () => {
         if (!orderToUpdate) return;
         
         updateOrder({ ...orderToUpdate, analyst, status: OrderStatus.InProgress });
+        addNotification(`Analista ${analyst.name} atribuído ao pedido ${orderId}.`, 'success');
     };
 
     const handleOrderClick = (order: Order) => {
@@ -70,8 +71,9 @@ const AdminDashboard: React.FC = () => {
         return orders
             .filter(order => 
                 order.status === OrderStatus.Completed &&
-                order.createdAt.getMonth() === currentMonth &&
-                order.createdAt.getFullYear() === currentYear
+                order.paymentConfirmedAt &&
+                order.paymentConfirmedAt.getMonth() === currentMonth &&
+                order.paymentConfirmedAt.getFullYear() === currentYear
             )
             .reduce((sum, order) => sum + order.total, 0);
     }, [orders]);
@@ -79,8 +81,6 @@ const AdminDashboard: React.FC = () => {
     const revenueByService = useMemo(() => {
         return orders
             .filter(order => order.status === OrderStatus.Completed)
-            // FIX: By explicitly typing the initial value of `reduce`, we ensure that `acc` is correctly
-            // inferred as `Record<string, number>`, resolving downstream type errors.
             .reduce((acc, order) => {
                 const serviceName = order.service.name;
                 if (!acc[serviceName]) {
@@ -248,8 +248,21 @@ const AdminDashboard: React.FC = () => {
                                                     case OrderStatus.AwaitingQuote:
                                                         return <span className="text-slate-500 italic text-xs">Aguardando orçamento</span>;
                                                     case OrderStatus.Pending:
-                                                        return <span className="text-slate-500 italic text-xs">Aguardando pagamento</span>;
+                                                        return (
+                                                            <select 
+                                                                onChange={(e) => assignAnalyst(order.id, e.target.value)} 
+                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-xs p-1 border rounded bg-white text-slate-900 focus:ring-brand-secondary focus:border-brand-secondary" 
+                                                                defaultValue=""
+                                                            >
+                                                                <option value="" disabled>Atribuir...</option>
+                                                                {analysts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                                            </select>
+                                                        );
                                                     case OrderStatus.InProgress:
+                                                        if (order.analyst) {
+                                                            return order.analyst.name;
+                                                        }
                                                         return (
                                                             <select 
                                                                 onChange={(e) => assignAnalyst(order.id, e.target.value)} 

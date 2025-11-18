@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../App';
 import { Page } from '../types';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const SignupPage: React.FC = () => {
     const [name, setName] = useState('');
@@ -12,8 +13,9 @@ const SignupPage: React.FC = () => {
     const [address, setAddress] = useState('');
     const [agreedToPolicy, setAgreedToPolicy] = useState(false);
     const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const { registerUser, setPage } = useAuth();
+    const { registerUser, setPage, addNotification } = useAuth();
 
     const formatCPF = (value: string) => {
         return value
@@ -33,13 +35,15 @@ const SignupPage: React.FC = () => {
     };
 
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!agreedToPolicy) {
-            alert('Você deve concordar com a Política de Privacidade para continuar.');
+            addNotification('Você deve concordar com a Política de Privacidade para continuar.', 'error');
             return;
         }
-        registerUser(name, email, cpf, birthDate, address);
+        setIsLoading(true);
+        await registerUser(name, email, cpf, birthDate, address);
+        setIsLoading(false);
     };
 
     return (
@@ -51,7 +55,7 @@ const SignupPage: React.FC = () => {
                         <p className="text-center text-slate-500 mb-8">Rápido e fácil, vamos começar!</p>
                         
                         <form onSubmit={handleSubmit}>
-                            <div className="space-y-4">
+                            <fieldset disabled={isLoading} className="space-y-4">
                                 <div>
                                     <label htmlFor="name" className="block text-sm font-medium mb-1 text-slate-700">Nome Completo</label>
                                     <input id="name" type="text" value={name} onChange={e => setName(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required />
@@ -78,7 +82,7 @@ const SignupPage: React.FC = () => {
                                     <label htmlFor="password" className="block text-sm font-medium mb-1 text-slate-700">Senha</label>
                                     <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required minLength={6} placeholder="Mínimo de 6 caracteres" />
                                 </div>
-                            </div>
+                            </fieldset>
                              <div className="mt-6 flex items-start">
                                 <input
                                     id="policy"
@@ -86,6 +90,7 @@ const SignupPage: React.FC = () => {
                                     checked={agreedToPolicy}
                                     onChange={(e) => setAgreedToPolicy(e.target.checked)}
                                     className="h-4 w-4 text-brand-secondary focus:ring-brand-secondary border-gray-300 rounded mt-1"
+                                    disabled={isLoading}
                                 />
                                 <label htmlFor="policy" className="ml-2 block text-sm text-gray-900">
                                     Li e concordo com a{' '}
@@ -93,6 +98,7 @@ const SignupPage: React.FC = () => {
                                         type="button"
                                         onClick={() => setIsPolicyModalOpen(true)}
                                         className="font-medium text-brand-secondary hover:underline"
+                                        disabled={isLoading}
                                     >
                                         Política de Privacidade
                                     </button>
@@ -100,8 +106,8 @@ const SignupPage: React.FC = () => {
                                 </label>
                             </div>
                             <div className="mt-8">
-                                <button type="submit" disabled={!agreedToPolicy} className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:bg-slate-400 disabled:cursor-not-allowed">
-                                    Criar Conta
+                                <button type="submit" disabled={!agreedToPolicy || isLoading} className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:bg-slate-400 disabled:cursor-not-allowed flex justify-center items-center h-[48px]">
+                                    {isLoading ? <LoadingSpinner /> : 'Criar Conta'}
                                 </button>
                             </div>
                         </form>
@@ -110,6 +116,7 @@ const SignupPage: React.FC = () => {
                             <button 
                                 onClick={() => setPage(Page.Login)} 
                                 className="font-semibold text-brand-secondary hover:underline"
+                                disabled={isLoading}
                             >
                                 Faça Login
                             </button>

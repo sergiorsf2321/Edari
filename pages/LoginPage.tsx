@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../App';
 import { Page, Role } from '../types';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 // Declaração para as bibliotecas globais do Google e da Apple
 declare global {
@@ -15,41 +16,42 @@ const AppleIcon = () => (
 );
 
 const LoginPage: React.FC = () => {
-    const { login, loginWithGoogle, loginWithApple, setPage } = useAuth();
+    const { login, loginWithGoogle, loginWithApple, setPage, addNotification } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement>(null);
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [isSocialLoading, setIsSocialLoading] = useState(false);
 
-    const handleEmailLogin = (e: React.FormEvent) => {
+    const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        login(email, Role.Client);
+        setIsLoading(true);
+        await login(email, Role.Client);
+        setIsLoading(false);
     };
 
-    const handleGoogleSignIn = (response: any) => {
-        // 'response.credential' é o ID Token (JWT) que o Google retorna
-        loginWithGoogle(response.credential);
+    const handleGoogleSignIn = async (response: any) => {
+        setIsSocialLoading(true);
+        await loginWithGoogle(response.credential);
+        setIsSocialLoading(false);
     };
 
     const handleAppleSignIn = async () => {
         try {
+            setIsSocialLoading(true);
             const data = await AppleID.auth.signIn();
-            loginWithApple(data.authorization.id_token);
+            await loginWithApple(data.authorization.id_token);
         } catch (error) {
             console.error("Erro no login com a Apple:", error);
-            alert("Ocorreu um erro durante o login com a Apple. Por favor, tente novamente.");
+            addNotification("Ocorreu um erro durante o login com a Apple.", 'error');
+        } finally {
+            setIsSocialLoading(false);
         }
     };
 
     useEffect(() => {
-        // Google Sign-In
         if (typeof google !== 'undefined') {
             google.accounts.id.initialize({
-                // =======================================================================
-                // ATENÇÃO, EQUIPE DE BACKEND:
-                // O Client ID abaixo é um placeholder. Ele DEVE ser substituído pelo 
-                // Client ID real, obtido no Google Cloud Console e configurado para
-                // o domínio de produção.
-                // =======================================================================
                 client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
                 callback: handleGoogleSignIn
             });
@@ -64,24 +66,17 @@ const LoginPage: React.FC = () => {
             console.error("Google Identity Services script not loaded.");
         }
 
-        // Apple Sign-In
         if (typeof AppleID !== 'undefined') {
             AppleID.auth.init({
-                // =======================================================================
-                // ATENÇÃO, EQUIPE DE BACKEND:
-                // O Service ID (clientId) abaixo é um exemplo. Ele DEVE ser substituído 
-                // pelo Service ID real, configurado na sua conta de desenvolvedor Apple.
-                // O redirectURI também deve ser ajustado para o domínio de produção.
-                // =======================================================================
-                clientId : 'br.com.edari.signin', // Exemplo de Service ID
+                clientId : 'br.com.edari.signin',
                 scope : 'name email',
-                redirectURI : window.location.origin, // Para popup, o origin é suficiente
+                redirectURI : window.location.origin,
                 usePopup : true
             });
         } else {
              console.error("Apple Sign In JS script not loaded.");
         }
-    }, [loginWithGoogle, loginWithApple]);
+    }, []);
 
     return (
         <div className="bg-brand-light py-12 sm:py-24">
@@ -93,14 +88,14 @@ const LoginPage: React.FC = () => {
                     <form onSubmit={handleEmailLogin} className="space-y-4">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium mb-1 text-slate-700">Email</label>
-                            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required />
+                            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required disabled={isLoading || isSocialLoading} />
                         </div>
                         <div>
                             <label htmlFor="password"className="block text-sm font-medium mb-1 text-slate-700">Senha</label>
-                            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" placeholder="Qualquer senha funciona" required />
+                            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" placeholder="Qualquer senha funciona" required disabled={isLoading || isSocialLoading} />
                         </div>
-                        <button type="submit" className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity">
-                            Entrar
+                        <button type="submit" className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity flex justify-center items-center h-[48px]" disabled={isLoading || isSocialLoading}>
+                            {isLoading ? <LoadingSpinner /> : 'Entrar'}
                         </button>
                     </form>
                     
@@ -111,11 +106,13 @@ const LoginPage: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col items-center">
+                        {isSocialLoading && <div className="absolute inset-0 bg-white bg-opacity-50 flex justify-center items-center rounded-xl"><LoadingSpinner /></div>}
                         <div ref={googleButtonRef}></div>
                         <button
                             type="button"
                             onClick={handleAppleSignIn}
                             className="mt-3 w-[300px] bg-black text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center hover:bg-gray-800 transition-colors"
+                            disabled={isLoading || isSocialLoading}
                         >
                             <AppleIcon />
                             Entrar com a Apple
@@ -127,6 +124,7 @@ const LoginPage: React.FC = () => {
                         <button 
                             onClick={() => setPage(Page.Signup)} 
                             className="font-semibold text-brand-secondary hover:underline"
+                            disabled={isLoading || isSocialLoading}
                         >
                             Crie agora
                         </button>

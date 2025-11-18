@@ -1,5 +1,5 @@
 import React, { useState, createContext, useContext, useCallback, useEffect } from 'react';
-import { User, Role, Page, AuthContextType, Order } from './types';
+import { User, Role, Page, AuthContextType, Order, Notification } from './types';
 import { MOCK_USERS, MOCK_ORDERS } from './constants';
 
 import Header from './components/Header';
@@ -14,6 +14,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import StaffLoginPage from './pages/StaffLoginPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import EmailConfirmationPage from './pages/EmailConfirmationPage';
+import NotificationContainer from './components/NotificationContainer';
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -31,90 +32,86 @@ const App: React.FC = () => {
     const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
     const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
     const [lastRegisteredEmail, setLastRegisteredEmail] = useState<string | null>(null);
+    const [notifications, setNotifications] = useState<Notification[]>([]);
 
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [page]);
+    
+    const addNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
+        const id = Date.now();
+        setNotifications(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }, 5000);
+    }, []);
+    
+    const removeNotification = useCallback((id: number) => {
+        setNotifications(prev => prev.filter(n => n.id !== id));
+    }, []);
 
-    const login = useCallback((email: string, role: Role) => {
+    const login = useCallback(async (email: string, role: Role): Promise<boolean> => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
         const foundUser = MOCK_USERS.find(u => u.email === email && u.role === role);
         if (foundUser) {
             if (!foundUser.isVerified) {
-                alert('Seu e-mail ainda não foi confirmado. Por favor, verifique sua caixa de entrada e siga as instruções de confirmação.');
-                setLastRegisteredEmail(email); // For simulation purposes
+                addNotification('Seu e-mail ainda não foi confirmado.', 'error');
+                setLastRegisteredEmail(email);
                 setPage(Page.EmailConfirmation);
-                return;
+                return false;
             }
             setUser(foundUser);
             setPage(Page.Dashboard);
+            addNotification(`Bem-vindo(a) de volta, ${foundUser.name.split(' ')[0]}!`, 'success');
+            return true;
         } else {
-            alert('Usuário ou perfil inválido!');
+            addNotification('Usuário ou perfil inválido!', 'error');
+            return false;
         }
-    }, []);
+    }, [addNotification]);
     
-    const registerUser = useCallback((name: string, email: string, cpf: string, birthDate: string, address: string) => {
+    const registerUser = useCallback(async (name: string, email: string, cpf: string, birthDate: string, address: string) => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
         const existingUser = MOCK_USERS.find(u => u.email === email);
         if (existingUser) {
-            alert('Este e-mail já está cadastrado. Por favor, faça login.');
+            addNotification('Este e-mail já está cadastrado. Por favor, faça login.', 'error');
             setPage(Page.Login);
             return;
         }
         const newUser: User = {
             id: `user-${Date.now()}`,
-            name,
-            email,
-            cpf,
-            birthDate,
-            address,
+            name, email, cpf, birthDate, address,
             role: Role.Client,
-            isVerified: false, // User starts as unverified
+            isVerified: false,
         };
         MOCK_USERS.push(newUser);
         setLastRegisteredEmail(email);
         setPage(Page.EmailConfirmation);
-        console.log("Novo usuário criado (não verificado):", newUser);
-    }, [setPage]);
+        addNotification('Cadastro realizado com sucesso! Confirme seu e-mail.', 'success');
+    }, [addNotification]);
 
     const verifyUser = useCallback((email: string) => {
         const userToVerify = MOCK_USERS.find(u => u.email === email);
         if (userToVerify) {
             userToVerify.isVerified = true;
-            console.log("Usuário verificado:", userToVerify);
+            addNotification('E-mail confirmado com sucesso! Você já pode fazer login.', 'success');
         }
-    }, []);
+    }, [addNotification]);
 
-    const logout = useCallback(() => {
+    const logout = useCallback(async () => {
+        await new Promise(resolve => setTimeout(resolve, 500));
         setUser(null);
         setPage(Page.Landing);
         setSelectedOrder(null);
-    }, []);
+        addNotification("Você saiu com segurança.", 'info');
+    }, [addNotification]);
 
-    const loginWithGoogle = useCallback((googleToken: string) => {
-        console.log("[Frontend Simulation] Received Google Token. Sending to backend for verification:", googleToken);
-        
-        let userData;
-        try {
-            const payload = googleToken.split('.')[1];
-            const decodedPayload = atob(payload);
-            const parsedPayload = JSON.parse(decodedPayload);
-            userData = {
-                email: parsedPayload.email,
-                name: parsedPayload.name,
-                picture: parsedPayload.picture,
-            };
-        } catch (error) {
-            console.error("Erro ao decodificar o token do Google (simulação):", error);
-            alert("Login com Google falhou. Token inválido.");
-            return;
-        }
-
+    const socialLogin = useCallback((userData: { email: string; name: string; picture?: string; }) => {
         const existingUser = MOCK_USERS.find(u => u.email === userData.email && u.role === Role.Client);
-
         if (existingUser) {
             existingUser.picture = userData.picture;
-            existingUser.isVerified = true; // Google accounts are implicitly verified
+            existingUser.isVerified = true;
             setUser(existingUser);
-            console.log("Usuário existente logado:", existingUser);
         } else {
             const newUser: User = {
                 id: `user-${Date.now()}`,
@@ -122,55 +119,45 @@ const App: React.FC = () => {
                 email: userData.email,
                 role: Role.Client,
                 picture: userData.picture,
-                isVerified: true, // Google accounts are implicitly verified
+                isVerified: true,
             };
             MOCK_USERS.push(newUser);
             setUser(newUser);
-            console.log("Novo usuário criado e logado:", newUser);
         }
         setPage(Page.Dashboard);
+        addNotification(`Login com sucesso, ${userData.name.split(' ')[0]}!`, 'success');
+    }, [addNotification]);
 
-    }, []);
+    const loginWithGoogle = useCallback(async (googleToken: string) => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+            const payload = googleToken.split('.')[1];
+            const decodedPayload = atob(payload);
+            const parsedPayload = JSON.parse(decodedPayload);
+            socialLogin({
+                email: parsedPayload.email,
+                name: parsedPayload.name,
+                picture: parsedPayload.picture,
+            });
+        } catch (error) {
+            addNotification("Login com Google falhou. Token inválido.", 'error');
+        }
+    }, [socialLogin, addNotification]);
     
-    const loginWithApple = useCallback((appleToken: string) => {
-        console.log("[Frontend Simulation] Received Apple Token. Sending to backend for verification:", appleToken);
-        
-        let userData;
+    const loginWithApple = useCallback(async (appleToken: string) => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
         try {
             const payload = appleToken.split('.')[1];
             const decodedPayload = atob(payload);
             const parsedPayload = JSON.parse(decodedPayload);
-            userData = {
+            socialLogin({
                 email: parsedPayload.email,
-                // Apple doesn't always send the name, but for simulation we'll construct a default name if needed.
-                name: parsedPayload.name || parsedPayload.email.split('@')[0], 
-            };
+                name: parsedPayload.name || parsedPayload.email.split('@')[0],
+            });
         } catch (error) {
-            console.error("Erro ao decodificar o token da Apple (simulação):", error);
-            alert("Login com Apple falhou. Token inválido.");
-            return;
+            addNotification("Login com Apple falhou. Token inválido.", 'error');
         }
-
-        const existingUser = MOCK_USERS.find(u => u.email === userData.email && u.role === Role.Client);
-
-        if (existingUser) {
-            existingUser.isVerified = true; // Apple accounts are implicitly verified
-            setUser(existingUser);
-            console.log("Usuário existente logado via Apple:", existingUser);
-        } else {
-            const newUser: User = {
-                id: `user-${Date.now()}`,
-                name: userData.name,
-                email: userData.email,
-                role: Role.Client,
-                isVerified: true, // Apple accounts are implicitly verified
-            };
-            MOCK_USERS.push(newUser);
-            setUser(newUser);
-            console.log("Novo usuário criado e logado via Apple:", newUser);
-        }
-        setPage(Page.Dashboard);
-    }, []);
+    }, [socialLogin, addNotification]);
 
     const updateOrder = useCallback((updatedOrder: Order) => {
         setOrders(prevOrders => prevOrders.map(o => o.id === updatedOrder.id ? updatedOrder : o));
@@ -189,34 +176,23 @@ const App: React.FC = () => {
 
     const renderPage = () => {
         const isProtectedRoute = page === Page.Dashboard || page === Page.Order || page === Page.OrderDetail;
-
         if (isProtectedRoute && !user) {
             return <LoginPage />;
         }
         
         switch (page) {
-            case Page.Landing:
-                return <LandingPage />;
-            case Page.Login:
-                return <LoginPage />;
-            case Page.StaffLogin:
-                return <StaffLoginPage />;
-            case Page.Signup:
-                return <SignupPage />;
-            case Page.EmailConfirmation:
-                return <EmailConfirmationPage />;
-            case Page.Order:
-                return <OrderFlow />;
-            case Page.OrderDetail:
-                return <OrderDetailPage />;
+            case Page.Landing: return <LandingPage />;
+            case Page.Login: return <LoginPage />;
+            case Page.StaffLogin: return <StaffLoginPage />;
+            case Page.Signup: return <SignupPage />;
+            case Page.EmailConfirmation: return <EmailConfirmationPage />;
+            case Page.Order: return <OrderFlow />;
+            case Page.OrderDetail: return <OrderDetailPage />;
             case Page.Dashboard:
                 switch (user!.role) {
-                    case Role.Admin:
-                        return <AdminDashboard />;
-                    case Role.Analyst:
-                        return <AnalystDashboard />;
-                    case Role.Client:
-                        return <ClientDashboard />;
+                    case Role.Admin: return <AdminDashboard />;
+                    case Role.Analyst: return <AnalystDashboard />;
+                    case Role.Client: return <ClientDashboard />;
                 }
                 break;
             default:
@@ -225,8 +201,9 @@ const App: React.FC = () => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, registerUser, verifyUser, logout, page, setPage, loginWithGoogle, loginWithApple, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder, lastRegisteredEmail }}>
+        <AuthContext.Provider value={{ user, login, registerUser, verifyUser, logout, page, setPage, loginWithGoogle, loginWithApple, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder, lastRegisteredEmail, addNotification }}>
             <div className="bg-brand-light min-h-screen flex flex-col font-sans text-slate-800">
+                <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
                 <Header />
                 <main className="flex-grow">
                     {renderPage()}

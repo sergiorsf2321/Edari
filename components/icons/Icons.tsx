@@ -21,12 +21,13 @@ import {
     Paperclip as PaperclipIcon,
     Send as SendIcon,
     Download as DownloadIcon,
-    // FIX: Import LifeBuoy as LifeBuoyIcon
     LifeBuoy as LifeBuoyIcon,
     Handshake as HandshakeIcon,
     ScanText as ScanTextIcon,
     FileSearch2 as FileSearch2Icon,
     MailCheck as MailCheckIcon,
+    AlertTriangle as AlertTriangleIcon,
+    Info as InfoIcon,
 } from 'lucide-react';
 
 export {
@@ -52,10 +53,11 @@ export {
     PaperclipIcon,
     SendIcon,
     DownloadIcon,
-    // FIX: Export the aliased LifeBuoyIcon
     LifeBuoyIcon,
     HandshakeIcon,
     ScanTextIcon,
     FileSearch2Icon,
     MailCheckIcon,
+    AlertTriangleIcon,
+    InfoIcon,
 };
