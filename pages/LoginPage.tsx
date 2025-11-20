@@ -3,7 +3,7 @@ import { useAuth } from '../App';
 import { Page, Role } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Declaração para as bibliotecas globais do Google e da Apple
+// Declaração para as bibliotecas globais do Google e Apple
 declare global {
   const google: any;
   const AppleID: any;
@@ -18,6 +18,7 @@ const AppleIcon = () => (
 const LoginPage: React.FC = () => {
     const { login, loginWithGoogle, loginWithApple, setPage, addNotification } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement>(null);
+    
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -38,9 +39,13 @@ const LoginPage: React.FC = () => {
 
     const handleAppleSignIn = async () => {
         try {
-            setIsSocialLoading(true);
-            const data = await AppleID.auth.signIn();
-            await loginWithApple(data.authorization.id_token);
+            if (typeof AppleID !== 'undefined') {
+                setIsSocialLoading(true);
+                const data = await AppleID.auth.signIn();
+                await loginWithApple(data.authorization.id_token);
+            } else {
+                 addNotification("Apple Sign In não está disponível no momento.", 'error');
+            }
         } catch (error) {
             console.error("Erro no login com a Apple:", error);
             addNotification("Ocorreu um erro durante o login com a Apple.", 'error');
@@ -50,31 +55,39 @@ const LoginPage: React.FC = () => {
     };
 
     useEffect(() => {
-        if (typeof google !== 'undefined') {
-            google.accounts.id.initialize({
-                client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
-                callback: handleGoogleSignIn
-            });
+        // --- Configuração do Google ---
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            try {
+                google.accounts.id.initialize({
+                    client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+                    callback: handleGoogleSignIn,
+                    // Evita o erro 'blocked a frame' em alguns ambientes de sandbox ao desabilitar o One Tap automático se necessário
+                    auto_select: false 
+                });
 
-            if (googleButtonRef.current) {
-                google.accounts.id.renderButton(
-                    googleButtonRef.current,
-                    { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
-                );
+                if (googleButtonRef.current) {
+                    google.accounts.id.renderButton(
+                        googleButtonRef.current,
+                        { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
+                    );
+                }
+            } catch (error) {
+                console.warn("Google Identity Services failed to initialize:", error);
             }
-        } else {
-            console.error("Google Identity Services script not loaded.");
         }
 
+        // --- Configuração da Apple ---
         if (typeof AppleID !== 'undefined') {
-            AppleID.auth.init({
-                clientId : 'br.com.edari.signin',
-                scope : 'name email',
-                redirectURI : window.location.origin,
-                usePopup : true
-            });
-        } else {
-             console.error("Apple Sign In JS script not loaded.");
+            try {
+                AppleID.auth.init({
+                    clientId : 'br.com.edari.signin',
+                    scope : 'name email',
+                    redirectURI : window.location.origin,
+                    usePopup : true
+                });
+            } catch (e) {
+                console.warn("Apple ID init failed", e);
+            }
         }
     }, []);
 
@@ -94,7 +107,12 @@ const LoginPage: React.FC = () => {
                             <label htmlFor="password"className="block text-sm font-medium mb-1 text-slate-700">Senha</label>
                             <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" placeholder="Qualquer senha funciona" required disabled={isLoading || isSocialLoading} />
                         </div>
-                        <button type="submit" className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity flex justify-center items-center h-[48px]" disabled={isLoading || isSocialLoading}>
+                        
+                        <button 
+                            type="submit" 
+                            className={`w-full font-bold py-3 rounded-lg flex justify-center items-center h-[48px] transition-all ${isLoading || isSocialLoading ? 'bg-slate-400 cursor-not-allowed text-slate-200' : 'bg-brand-accent text-white hover:opacity-90'}`}
+                            disabled={isLoading || isSocialLoading}
+                        >
                             {isLoading ? <LoadingSpinner /> : 'Entrar'}
                         </button>
                     </form>
@@ -106,7 +124,7 @@ const LoginPage: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col items-center">
-                        {isSocialLoading && <div className="absolute inset-0 bg-white bg-opacity-50 flex justify-center items-center rounded-xl"><LoadingSpinner /></div>}
+                        {isSocialLoading && <div className="absolute inset-0 bg-white bg-opacity-50 flex justify-center items-center rounded-xl z-10"><LoadingSpinner /></div>}
                         <div ref={googleButtonRef}></div>
                         <button
                             type="button"

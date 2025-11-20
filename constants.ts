@@ -41,8 +41,8 @@ export const SERVICES: Service[] = [
   },
   {
     id: ServiceId.RegistryIntermediation,
-    name: 'Apoio ao Protocolo Registral',
-    description: 'Realizamos o protocolo e acompanhamento do seu processo de forma digital na plataforma. Os custos de cartório (emolumentos) serão repassados de forma transparente dentro da plataforma.',
+    name: 'Protocolo Registral',
+    description: 'Realizamos o protocolo e acompanhamento do seu processo de forma digital na plataforma ONR. Os custos de cartório (emolumentos) serão repassados de forma transparente dentro da plataforma.',
     price: 150,
     duration: 'Personalizado',
     features: [

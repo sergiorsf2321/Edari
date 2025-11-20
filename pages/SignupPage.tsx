@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../App';
 import { Page } from '../types';
 import PrivacyPolicyModal from '../components/PrivacyPolicyModal';
@@ -105,8 +105,13 @@ const SignupPage: React.FC = () => {
                                     .
                                 </label>
                             </div>
+
                             <div className="mt-8">
-                                <button type="submit" disabled={!agreedToPolicy || isLoading} className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity disabled:bg-slate-400 disabled:cursor-not-allowed flex justify-center items-center h-[48px]">
+                                <button 
+                                    type="submit" 
+                                    disabled={!agreedToPolicy || isLoading} 
+                                    className={`w-full font-bold py-3 rounded-lg flex justify-center items-center h-[48px] transition-all ${(!agreedToPolicy || isLoading) ? 'bg-slate-400 cursor-not-allowed text-slate-200' : 'bg-brand-accent text-white hover:opacity-90'}`}
+                                >
                                     {isLoading ? <LoadingSpinner /> : 'Criar Conta'}
                                 </button>
                             </div>
