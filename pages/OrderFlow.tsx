@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '../App';
 import { SERVICES, MOCK_USERS } from '../constants';
 import { Service, UploadedFile, Page, ServiceId, Order, OrderStatus } from '../types';
-import { UploadIcon, FileIcon, TrashIcon, CheckCircleIcon } from '../components/icons/Icons';
+import { UploadIcon, FileIcon, TrashIcon, CheckCircleIcon, ShieldCheckIcon } from '../components/icons/Icons';
 import Payment from '../components/Payment';
 import { BRAZILIAN_STATES, CITIES_BY_STATE } from '../data/locations';
 import { findRegistriesByCity } from '../services/registryService';
@@ -62,8 +62,8 @@ const OrderFlow: React.FC = () => {
     const handleServiceDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setServiceSpecificData(prev => {
-            const processedValue = name === 'matricula'
-                ? value.replace(/\D/g, '') // Remove non-digit characters for 'matricula'
+            const processedValue = (name === 'matricula' || name === 'cpf1' || name === 'cpf2')
+                ? value.replace(/\D/g, '') 
                 : value;
             
             const newState = { ...prev, [name]: processedValue };
@@ -101,27 +101,35 @@ const OrderFlow: React.FC = () => {
     const generateOrderDescription = (): string => {
         if (!selectedService) return documentDescription;
 
-        const { state, city, registry, cpfCnpj, matricula, intendedAct, comarca, registries } = serviceSpecificData;
-        const stateName = state ? BRAZILIAN_STATES.find(s => s.uf === state)?.name : '';
-        const locationInfo = [city, stateName].filter(Boolean).join(' - ');
+        const data = serviceSpecificData;
+        const stateName = data.state ? BRAZILIAN_STATES.find(s => s.uf === data.state)?.name : '';
+        const locationInfo = [data.city, stateName].filter(Boolean).join(' - ');
 
         let generatedDescription = '';
 
         switch (selectedService.id) {
             case ServiceId.QualifiedSearch:
-                generatedDescription = `Pesquisa Qualificada para CPF/CNPJ: ${cpfCnpj || 'Não informado'}\nLocal: ${locationInfo}\nCartórios Específicos: ${registries || 'Todos da cidade'}`;
+                generatedDescription = `Pesquisa Qualificada para CPF/CNPJ: ${data.cpfCnpj || 'Não informado'}\nLocal: ${locationInfo}\nCartórios Específicos: ${data.registries || 'Todos da cidade'}`;
                 break;
             case ServiceId.DigitalCertificate:
-                generatedDescription = `Solicitação de Certidão Digital\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
+                if (data.certificateType === 'imovel') {
+                    generatedDescription = `Certidão de Imóvel\nLocal: ${locationInfo}\nCartório: ${data.registry || 'Não informado'}\nMatrícula: ${data.matricula || 'Não informada'}`;
+                } else if (data.certificateType === 'nascimento') {
+                    generatedDescription = `Certidão de Nascimento\nNome: ${data.fullName}\nData de Nascimento: ${data.birthDate}\nLocal de Nascimento: ${locationInfo}\nFiliação: ${data.filiacao}`;
+                } else if (data.certificateType === 'casamento') {
+                    generatedDescription = `Certidão de Casamento\nCônjuge 1: ${data.spouse1Name} (CPF: ${data.cpf1})\nFiliação 1: ${data.filiacao1}\nCônjuge 2: ${data.spouse2Name} (CPF: ${data.cpf2})\nFiliação 2: ${data.filiacao2}\nLocal do Casamento: ${locationInfo}\nCartório: ${data.registry || 'Não informado'}\nRegime de Bens: ${data.regime}`;
+                } else {
+                    generatedDescription = `Solicitação de Certidão Digital (Tipo não especificado)`;
+                }
                 break;
             case ServiceId.PreAnalysis:
-                generatedDescription = `Solicitação de Pré-Análise Documental\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nComarca: ${comarca || city}`;
+                generatedDescription = `Solicitação de Pré-Análise Documental\nLocal: ${locationInfo}\nCartório: ${data.registry || 'Não informado'}\nComarca: ${data.comarca || data.city}`;
                 break;
             case ServiceId.RegistryIntermediation:
-                generatedDescription = `Intermediação Registral\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
+                generatedDescription = `Intermediação Registral\nLocal: ${locationInfo}\nCartório: ${data.registry || 'Não informado'}\nMatrícula: ${data.matricula || 'Não informada'}`;
                 break;
             case ServiceId.DocPreparation:
-                generatedDescription = `Preparação Documental\nAto Pretendido: ${intendedAct || 'Não informado'}\nLocal: ${locationInfo}\nCartório: ${registry || 'Não informado'}\nMatrícula: ${matricula || 'Não informada'}`;
+                generatedDescription = `Preparação Documental\nAto Pretendido: ${data.intendedAct || 'Não informado'}\nLocal: ${locationInfo}\nCartório: ${data.registry || 'Não informado'}\nMatrícula: ${data.matricula || 'Não informada'}`;
                 break;
             default:
                 return documentDescription;
@@ -187,10 +195,24 @@ const OrderFlow: React.FC = () => {
 
     const isStep1Valid = useCallback(() => {
         if (!selectedService) return false;
+        const data = serviceSpecificData;
         
+        if (selectedService.id === ServiceId.DigitalCertificate) {
+            if (!data.certificateType) return false;
+            if (data.certificateType === 'imovel') {
+                return !!(data.state && data.city && data.registry && data.matricula);
+            }
+            if (data.certificateType === 'nascimento') {
+                return !!(data.fullName && data.birthDate && data.state && data.city && data.filiacao);
+            }
+            if (data.certificateType === 'casamento') {
+                return !!(data.spouse1Name && data.cpf1 && data.filiacao1 && data.spouse2Name && data.cpf2 && data.filiacao2 && data.state && data.city && data.registry && data.regime);
+            }
+            return false;
+        }
+
         const requiredFields: { [key in ServiceId]?: string[] } = {
             [ServiceId.QualifiedSearch]: ['cpfCnpj', 'state', 'city'],
-            [ServiceId.DigitalCertificate]: ['state', 'city', 'registry', 'matricula'],
             [ServiceId.PreAnalysis]: ['state', 'city', 'registry'],
             [ServiceId.RegistryIntermediation]: ['state', 'city', 'registry'],
             [ServiceId.DocPreparation]: ['intendedAct', 'state', 'city', 'registry', 'matricula'],
@@ -277,7 +299,7 @@ const OrderFlow: React.FC = () => {
                         className={commonFields} 
                         placeholder={placeholder} 
                         required={required}
-                        inputMode={name === 'matricula' ? 'numeric' : 'text'}
+                        inputMode={(name === 'matricula' || name.includes('cpf')) ? 'numeric' : 'text'}
                     />
                 ) : (
                     <textarea id={name} name={name} value={serviceSpecificData[name] || ''} onChange={handleServiceDataChange} className={commonFields} placeholder={placeholder} required={required} rows={3} />
@@ -287,11 +309,11 @@ const OrderFlow: React.FC = () => {
 
         const citiesForState = selectedState ? CITIES_BY_STATE[selectedState] || [] : [];
     
-        const renderLocationSelectors = (config: { state?: boolean, city?: boolean, registry?: boolean }) => (
+        const renderLocationSelectors = (config: { state?: boolean, city?: boolean, registry?: boolean, stateLabel?: string, cityLabel?: string, registryLabel?: string }) => (
             <>
                 {config.state && (
                     <div>
-                        <label htmlFor="state" className="block text-sm font-medium mb-1">Estado</label>
+                        <label htmlFor="state" className="block text-sm font-medium mb-1">{config.stateLabel || 'Estado'}</label>
                         <select id="state" name="state" value={selectedState || ''} onChange={handleServiceDataChange} className={commonFields} required>
                             <option value="" disabled>Selecione um estado</option>
                             {BRAZILIAN_STATES.map(state => <option key={state.uf} value={state.uf}>{state.name}</option>)}
@@ -300,7 +322,7 @@ const OrderFlow: React.FC = () => {
                 )}
                 {config.city && (
                      <div>
-                        <label htmlFor="city" className="block text-sm font-medium mb-1">Cidade</label>
+                        <label htmlFor="city" className="block text-sm font-medium mb-1">{config.cityLabel || 'Cidade'}</label>
                         <select id="city" name="city" value={selectedCity || ''} onChange={handleServiceDataChange} className={commonFields} disabled={!selectedState || citiesForState.length === 0} required>
                             <option value="" disabled>Selecione uma cidade</option>
                             {citiesForState.map(city => <option key={city} value={city}>{city}</option>)}
@@ -309,7 +331,7 @@ const OrderFlow: React.FC = () => {
                 )}
                 {config.registry && (
                      <div>
-                        <label htmlFor="registry" className="block text-sm font-medium mb-1">Cartório de Registro de Imóveis</label>
+                        <label htmlFor="registry" className="block text-sm font-medium mb-1">{config.registryLabel || 'Cartório de Registro de Imóveis'}</label>
                         <select id="registry" name="registry" value={serviceSpecificData.registry || ''} onChange={handleServiceDataChange} className={commonFields} disabled={!selectedCity || isLoadingRegistries || registries.length === 0} required>
                             {isLoadingRegistries ? (
                                 <option>Buscando cartórios...</option>
@@ -326,6 +348,15 @@ const OrderFlow: React.FC = () => {
             </>
         );
 
+        const LgpdDisclaimer = () => (
+             <div className="mt-4 p-3 bg-blue-50 rounded-md border border-blue-100 flex items-start gap-3">
+                <ShieldCheckIcon className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-800 text-justify">
+                    <strong>Segurança e Privacidade:</strong> A Edari utiliza os dados informados acima apenas e exclusivamente para obter a certidão junto ao cartório competente, em total conformidade com a Lei Geral de Proteção de Dados (LGPD).
+                </p>
+            </div>
+        );
+
 
         switch(selectedService.id) {
             case ServiceId.QualifiedSearch:
@@ -339,8 +370,61 @@ const OrderFlow: React.FC = () => {
             case ServiceId.DigitalCertificate:
                  return (
                     <div className="space-y-4">
-                        {renderLocationSelectors({ state: true, city: true, registry: true })}
-                        {renderInput('matricula', 'Número da Matrícula')}
+                        <div>
+                            <label htmlFor="certificateType" className="block text-sm font-medium mb-1">Tipo de Certidão</label>
+                            <select 
+                                id="certificateType" 
+                                name="certificateType" 
+                                value={serviceSpecificData.certificateType || ''} 
+                                onChange={handleServiceDataChange} 
+                                className={commonFields} 
+                                required
+                            >
+                                <option value="" disabled>Selecione o tipo</option>
+                                <option value="imovel">Matrícula de Imóvel</option>
+                                <option value="nascimento">Nascimento</option>
+                                <option value="casamento">Casamento</option>
+                            </select>
+                        </div>
+
+                        {serviceSpecificData.certificateType === 'imovel' && (
+                            <>
+                                {renderLocationSelectors({ state: true, city: true, registry: true })}
+                                {renderInput('matricula', 'Número da Matrícula')}
+                                <LgpdDisclaimer />
+                            </>
+                        )}
+
+                        {serviceSpecificData.certificateType === 'nascimento' && (
+                            <>
+                                {renderInput('fullName', 'Nome Completo')}
+                                {renderInput('birthDate', 'Data de Nascimento (DD/MM/AAAA)')}
+                                {renderLocationSelectors({ state: true, city: true, stateLabel: 'Estado de Nascimento', cityLabel: 'Cidade de Nascimento' })}
+                                {renderInput('filiacao', 'Filiação (Nome dos Pais)')}
+                                <LgpdDisclaimer />
+                            </>
+                        )}
+
+                        {serviceSpecificData.certificateType === 'casamento' && (
+                            <>
+                                <div className="bg-slate-100 p-3 rounded-md">
+                                    <p className="text-sm font-bold mb-2 text-slate-700">Cônjuge 1</p>
+                                    {renderInput('spouse1Name', 'Nome Completo')}
+                                    {renderInput('cpf1', 'CPF')}
+                                    {renderInput('filiacao1', 'Filiação')}
+                                </div>
+                                <div className="bg-slate-100 p-3 rounded-md">
+                                    <p className="text-sm font-bold mb-2 text-slate-700">Cônjuge 2</p>
+                                    {renderInput('spouse2Name', 'Nome Completo')}
+                                    {renderInput('cpf2', 'CPF')}
+                                    {renderInput('filiacao2', 'Filiação')}
+                                </div>
+                                
+                                {renderLocationSelectors({ state: true, city: true, registry: true, registryLabel: 'Cartório onde casaram' })}
+                                {renderInput('regime', 'Regime de Bens')}
+                                <LgpdDisclaimer />
+                            </>
+                        )}
                     </div>
                 );
             case ServiceId.PreAnalysis:

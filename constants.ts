@@ -18,12 +18,12 @@ export const SERVICES: Service[] = [
     id: ServiceId.DigitalCertificate,
     name: 'Certidão Digital',
     description: 'Obtenção de certidões oficiais com validade jurídica.',
-    price: 169.90,
+    price: 349.90,
     duration: 'Até 6 dias úteis',
     features: [
       'Documento oficial com validade jurídica',
       'Assinatura eletrônica do cartório',
-      'Válida por 30 dias para transações',
+      'Casamento, nascimento ou matrícula de imóvel',
       'Entregue digitalmente em seu painel',
     ]
   },
@@ -128,7 +128,7 @@ export const MOCK_ORDERS: Order[] = [
         isUrgent: false,
         propertyType: 'Casa',
         documents: [{ name: 'contrato.pdf', size: 1024 * 800, type: 'application/pdf' }, { name: 'planta.jpg', size: 1024 * 1200, type: 'image/jpeg' }],
-        total: 169.90,
+        total: 349.90,
         createdAt: new Date('2023-10-20T10:00:00Z'),
         updatedAt: new Date('2023-10-25T15:00:00Z'),
         paymentConfirmedAt: new Date('2023-10-20T10:05:00Z'),
