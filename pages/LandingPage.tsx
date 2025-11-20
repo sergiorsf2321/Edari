@@ -71,7 +71,7 @@ const LandingPage: React.FC = () => {
     };
 
     const whyEdariItems = [
-        { icon: ShieldCheckIcon, title: "Segurança", description: "Serviços realizados por especialistas para garantir a conformidade legal." },
+        { icon: ShieldCheckIcon, title: "Conformidade", description: "Serviços realizados por especialistas para assegurar o atendimento às exigências registrais." },
         { icon: ClockIcon, title: "Agilidade Digital", description: "Processos 100% online para otimizar seu tempo e resolver pendências." },
         { icon: CheckCircleIcon, title: "Precisão e Clareza", description: "Informações precisas e comunicação direta para sua tranquilidade." },
         { icon: HandshakeIcon, title: "Suporte Humano e Dedicado", description: "Nossa equipe está ao seu lado do início ao fim, garantindo que você se sinta seguro em cada etapa." }
@@ -88,10 +88,10 @@ const LandingPage: React.FC = () => {
             >
                 <div className="max-w-6xl mx-auto relative z-10">
                     <div className="text-center">
-                        <h1 className={`text-4xl md:text-6xl font-extrabold mb-4 tracking-tight transition-all duration-1000 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
-                          <span className="logo-sheen inline-block">A regularização que seu imóvel <span className="text-brand-accent">precisa</span>. A <span className="text-brand-accent">segurança</span> que <span className="text-brand-accent">você</span> merece.</span>
+                        <h1 className={`text-4xl md:text-6xl font-extrabold mb-6 tracking-tight leading-tight transition-all duration-1000 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
+                          <span className="logo-sheen inline-block py-2 px-1">A adequação registral que seu imóvel <span className="text-brand-accent">precisa</span>. A <span className="text-brand-accent">eficiência</span> que <span className="text-brand-accent">você</span> busca.</span>
                         </h1>
-                        <p className={`text-xl md:text-2xl text-blue-200 max-w-3xl mx-auto mb-8 transition-all duration-1000 ease-out delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>Da pesquisa em cartórios à intermediação de protocolo na plataforma ONR, análises documentais e preparação de processos completos, garantimos a conformidade e a valorização do seu patrimônio.</p>
+                        <p className={`text-xl md:text-2xl text-blue-200 max-w-3xl mx-auto mb-8 transition-all duration-1000 ease-out delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>Da busca em cartórios ao suporte no protocolo via ONR, realizamos a conferência de requisitos e a preparação de processos completos, assegurando a conformidade técnica e a regularidade formal do seu patrimônio.</p>
                         <button 
                             onClick={handleOrderClick}
                             className={`logo-sheen bg-green-600 text-white px-8 py-4 rounded-lg text-lg font-semibold hover:bg-green-700 transition-all shadow-lg transform hover:scale-105 inline-flex items-center gap-2 duration-1000 ease-out delay-500 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}
@@ -109,10 +109,10 @@ const LandingPage: React.FC = () => {
                         <h2 className="text-sm font-bold uppercase text-brand-secondary mb-2">Quem Somos</h2>
                         <h3 className="text-3xl font-bold mb-4 text-gray-900">Simplificando a Burocracia Imobiliária</h3>
                         <p className="text-gray-600 mb-4 text-justify">
-                            A EDARI nasceu da necessidade de trazer segurança e clareza ao complexo mercado imobiliário brasileiro. Somos uma equipe de especialistas na análise e gestão documental em tudo que envolve cartórios de registro de imóveis.
+                            A EDARI nasceu da necessidade de trazer agilidade e assertividade aos trâmites do mercado imobiliário brasileiro. Somos uma equipe de especialistas na análise de conformidade e gestão administrativa de documentos junto aos cartórios de registro de imóveis.
                         </p>
                         <p className="text-gray-600 text-justify">
-                           Nossa missão é transformar a burocracia em tranquilidade. Com um processo 100% digital, combinamos tecnologia e expertise para entregar desde pesquisas detalhadas e certidões digitais até a preparação de documentos e intermediação registral, garantindo que cada passo seja dado com a máxima confiança.
+                           Nossa missão é transformar a burocracia em eficiência. Com um processo 100% digital, combinamos tecnologia e conhecimento técnico para entregar desde a busca de certidões até a preparação documental e o saneamento de pendências, garantindo que cada etapa do registro ocorra com precisão e sem retrabalho.
                         </p>
                     </div>
                     <div className="flex justify-center items-center">

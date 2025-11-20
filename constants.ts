@@ -3,8 +3,8 @@ import { Service, ServiceId, User, Role, Order, OrderStatus } from './types';
 export const SERVICES: Service[] = [
   {
     id: ServiceId.QualifiedSearch,
-    name: 'Pesquisa Qualificada',
-    description: 'Localizamos imóveis em nome de pessoas físicas ou jurídicas, buscando por CPF/CNPJ nos cartórios de registro de imóveis.',
+    name: 'Pesquisa Registral de Matrículas',
+    description: 'Localizamos e solicitamos matrículas de imóveis buscando por CPF/CNPJ nos cartórios.',
     price: 49.90,
     duration: 'Até 6 dias úteis',
     features: [
@@ -17,7 +17,7 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.DigitalCertificate,
     name: 'Certidão Digital',
-    description: 'Solicitamos a certidão de matrícula oficial e digital do seu imóvel, com validade jurídica de 30 dias para qualquer transação.',
+    description: 'Obtenção de certidões oficiais com validade jurídica.',
     price: 169.90,
     duration: 'Até 6 dias úteis',
     features: [
@@ -29,21 +29,20 @@ export const SERVICES: Service[] = [
   },
   {
     id: ServiceId.PreAnalysis,
-    name: 'Pré-Análise Documental',
-    description: 'Analisamos sua documentação, apontamos pendências e orientamos sobre os próximos passos para a regularização no cartório competente.',
+    name: 'Pré-Conferência Documental',
+    description: 'Conferimos sua documentação contra os requisitos de registro, apontando pendências de formato e informações faltantes para o cartório competente.',
     price: null,
     duration: 'Personalizado',
     features: [
       'Análise de contratos, escrituras, plantas, etc.',
-      'Diagnóstico de pendências registrais',
-      'Orientação técnica para regularização',
-      'Comunicação direta com especialistas',
+      'Conferência Detalhada',
+      'Indicação de próximos passos para a regularização',
     ]
   },
   {
     id: ServiceId.RegistryIntermediation,
-    name: 'Intermediação Registral',
-    description: 'Realizamos o protocolo e acompanhamento do seu processo de forma 100% digital no cartório competente. Toda a documentação deve ser nato-digital. Os custos de cartório (emolumentos) serão repassados de forma transparente dentro da plataforma.',
+    name: 'Apoio ao Protocolo Registral',
+    description: 'Realizamos o protocolo e acompanhamento do seu processo de forma digital na plataforma. Os custos de cartório (emolumentos) serão repassados de forma transparente dentro da plataforma.',
     price: 150,
     duration: 'Personalizado',
     features: [
@@ -57,20 +56,19 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.DocPreparation,
     name: 'Preparação Documental',
-    description: 'Elaboramos os documentos técnicos, como requerimentos e memoriais, necessários para averbações e registros no seu imóvel.',
+    description: 'Elaboração e formatação final de requerimentos específicos, memoriais e documentação para averbações na matrícula do imóvel.',
     price: null,
     duration: 'Personalizado',
     features: [
       'Elaboração de requerimentos específicos',
-      'Criação de plantas e memoriais descritivos',
+      'Formatação e digitação de memoriais descritivos',
       'Documentação para averbações diversas',
-      'Comunicação direta com especialistas',
     ]
   },
   {
     id: ServiceId.TechnicalReport,
-    name: 'Parecer Técnico de Matrícula',
-    description: 'Analisamos a matrícula do seu imóvel e entregamos um relatório técnico detalhado, apontando o caminho para a regularização completa.',
+    name: 'Relatório de Conformidade de Matrícula',
+    description: 'Analisamos a matrícula e entregamos um relatório detalhado de conformidade, indicando as pendências administrativas e documentais para a adequação.',
     price: 199.90,
     duration: 'Até 4 dias úteis',
     features: [
@@ -83,14 +81,13 @@ export const SERVICES: Service[] = [
   {
     id: ServiceId.DevolutionaryNoteAnalysis,
     name: 'Análises de Notas Devolutivas',
-    description: 'Analisamos a nota devolutiva do cartório e elaboramos um parecer técnico explicando as exigências e como cumpri-las.',
+    description: 'Analisamos a nota devolutiva e fornecemos um relatório de requisitos para o cumprimento das exigências formais do cartório.',
     price: null,
     duration: 'Personalizado',
     features: [
       'Análise técnica da nota devolutiva',
-      'Relatório com parecer fundamentado',
+      'Relatório de Requisitos',
       'Orientações para cumprimento das exigências',
-      'Estratégia para recurso, se aplicável',
     ]
   },
 ];

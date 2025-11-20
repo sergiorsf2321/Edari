@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { MailIcon, PhoneIcon } from './icons/Icons';
-import { LOGO_URL } from '../assets';
+import { LOGO_FOOTER_URL } from '../assets';
 import { useAuth } from '../App';
 import { Page } from '../types';
 
@@ -11,9 +12,9 @@ const Footer: React.FC = () => {
       <footer className="bg-gray-900 text-white py-12 px-6">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-center items-center md:items-start text-center md:text-left md:justify-start md:gap-24">
           <div className="flex-shrink-0 mb-8 md:mb-0">
-            <img src={LOGO_URL} alt="EDARI Logo" className="h-10 w-auto filter brightness-0 invert mb-4 mx-auto md:mx-0" />
+            <img src={LOGO_FOOTER_URL} alt="EDARI Logo" className="h-24 w-auto mb-6 mx-auto md:mx-0" />
             <p className="text-gray-400 mb-4 max-w-xs">
-              Exame Documental e Adequação Registral Imobiliária
+              EDARI -  SOLUÇÕES EM DOCUMENTAÇÃO LTDA
             </p>
             <p className="text-gray-400 text-sm">
               Soluções completas para regularização de imóveis

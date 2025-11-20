@@ -22,9 +22,10 @@ const OrderFlow: React.FC = () => {
     
     const { user, setPage, addOrder } = useAuth();
 
+    // Rola para o topo sempre que a etapa (step) mudar
     useEffect(() => {
         window.scrollTo(0, 0);
-    }, []);
+    }, [step]);
 
     const selectedCity = serviceSpecificData.city;
     const selectedState = serviceSpecificData.state;
@@ -222,7 +223,7 @@ const OrderFlow: React.FC = () => {
                 <div className="relative">
                     <div className="absolute top-5 left-0 w-full h-1 bg-slate-200" aria-hidden="true"></div>
                     <div 
-                        className="absolute top-5 left-0 h-1 bg-brand-secondary transition-all duration-500" 
+                        className="absolute top-5 left-0 h-1 bg-green-600 transition-all duration-500" 
                         style={{ width: `${progressPercentage}%` }}
                         aria-hidden="true"
                     ></div>
@@ -238,14 +239,14 @@ const OrderFlow: React.FC = () => {
                                     <div className="flex flex-col items-center">
                                         <span 
                                             className={`flex items-center justify-center w-10 h-10 rounded-full shrink-0 transition-colors duration-300 relative ${
-                                                isCompleted ? 'bg-brand-secondary text-white border-2 border-brand-secondary' : 
+                                                isCompleted ? 'bg-green-600 text-white border-2 border-green-600' : 
                                                 isCurrent ? 'bg-blue-50 text-brand-primary border-2 border-brand-secondary' : 
                                                 'bg-white border-2 border-slate-200 text-slate-500'
                                             }`}
                                         >
                                             {isCompleted ? <CheckCircleIcon className="w-5 h-5"/> : stepNumber}
                                         </span>
-                                        <p className={`mt-2 text-sm font-medium ${isCompleted || isCurrent ? 'text-brand-primary' : 'text-slate-500'}`}>
+                                        <p className={`mt-2 text-sm font-medium ${isCompleted ? 'text-green-600' : isCurrent ? 'text-brand-primary' : 'text-slate-500'}`}>
                                             {title}
                                         </p>
                                     </div>

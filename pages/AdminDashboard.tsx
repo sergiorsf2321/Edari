@@ -183,11 +183,11 @@ const AdminDashboard: React.FC = () => {
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Receita por Serviço (Concluídos)</h3>
                         <div className="space-y-3 pt-2">
                             {Object.keys(revenueByService).length > 0 ? (
-                                Object.entries(revenueByService).sort((a, b) => b[1] - a[1]).map(([serviceName, total]) => (
+                                Object.entries(revenueByService).sort((a, b) => (b[1] as number) - (a[1] as number)).map(([serviceName, total]) => (
                                     <div key={serviceName} className="flex justify-between items-center text-sm">
                                         <span className="text-slate-600">{serviceName}</span>
                                         <span className="font-bold text-slate-800">
-                                            {total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                            {(total as number).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                                         </span>
                                     </div>
                                 ))
