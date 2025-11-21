@@ -1,8 +1,15 @@
 import { AuthContextType } from "../types";
 
-// URL base do Backend. Em desenvolvimento local, geralmente é localhost:3000 ou 8080.
-// Em produção, será a URL do Render (ex: https://api.edari.com.br)
-export const API_BASE_URL = 'http://localhost:3000/api'; 
+// Configuração da URL da API
+// Em desenvolvimento local: usa localhost
+// Em produção: você deve substituir a string abaixo pela URL que o Render te der (ex: https://edari-api.onrender.com/api)
+// Ou configurar via variável de ambiente se o seu processo de build permitir (ex: import.meta.env.VITE_API_URL)
+
+const PROD_API_URL = 'https://SEU-APP-NO-RENDER.onrender.com/api'; // <--- SUBSTITUA ISSO APÓS O DEPLOY DO BACKEND
+
+export const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:3000/api'
+  : PROD_API_URL;
 
 // Helper para cabeçalhos de autenticação
 const getAuthHeaders = () => {
