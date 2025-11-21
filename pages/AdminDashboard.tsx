@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../App';
-import { MOCK_USERS } from '../constants';
+import { MOCK_USERS } from '../data/mocks';
 import { Order, OrderStatus, Role, Page } from '../types';
 import { 
     BarChart, 

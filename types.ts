@@ -121,4 +121,5 @@ export interface AuthContextType {
   addOrder: (newOrderData: Omit<Order, 'id'>) => void;
   lastRegisteredEmail: string | null;
   addNotification: (message: string, type: 'success' | 'error' | 'info') => void;
+  updateUserProfile: (data: Partial<User>) => void;
 }

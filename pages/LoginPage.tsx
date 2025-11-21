@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../App';
 import { Page, Role } from '../types';
@@ -55,26 +56,29 @@ const LoginPage: React.FC = () => {
     };
 
     useEffect(() => {
-        // --- Configuração do Google ---
-        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-            try {
-                google.accounts.id.initialize({
-                    client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
-                    callback: handleGoogleSignIn,
-                    // Evita o erro 'blocked a frame' em alguns ambientes de sandbox ao desabilitar o One Tap automático se necessário
-                    auto_select: false 
-                });
+        const initializeGoogle = () => {
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                try {
+                    google.accounts.id.initialize({
+                        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+                        callback: handleGoogleSignIn,
+                        auto_select: false,
+                        cancel_on_tap_outside: true
+                    });
 
-                if (googleButtonRef.current) {
-                    google.accounts.id.renderButton(
-                        googleButtonRef.current,
-                        { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
-                    );
+                    if (googleButtonRef.current) {
+                        google.accounts.id.renderButton(
+                            googleButtonRef.current,
+                            { theme: "outline", size: "large", type: 'standard', text: 'signin_with', shape: 'rectangular', width: '300' } 
+                        );
+                    }
+                } catch (error) {
+                    // Em ambientes de sandbox ou iframes restritos, o Google Auth pode falhar.
+                    // Capturamos o erro silenciosamente para não quebrar a página inteira.
+                    console.warn("Google Sign-In falhou ao inicializar (provável ambiente de teste/sandbox):", error);
                 }
-            } catch (error) {
-                console.warn("Google Identity Services failed to initialize:", error);
             }
-        }
+        };
 
         // --- Configuração da Apple ---
         if (typeof AppleID !== 'undefined') {
@@ -89,6 +93,10 @@ const LoginPage: React.FC = () => {
                 console.warn("Apple ID init failed", e);
             }
         }
+
+        // Add delay to ensure DOM is ready and script is loaded
+        const timer = setTimeout(initializeGoogle, 500);
+        return () => clearTimeout(timer);
     }, []);
 
     return (
@@ -125,7 +133,11 @@ const LoginPage: React.FC = () => {
 
                     <div className="flex flex-col items-center">
                         {isSocialLoading && <div className="absolute inset-0 bg-white bg-opacity-50 flex justify-center items-center rounded-xl z-10"><LoadingSpinner /></div>}
-                        <div ref={googleButtonRef}></div>
+                        
+                        {/* Botão Google */}
+                        <div ref={googleButtonRef} className="h-[40px] w-[300px] flex justify-center min-h-[40px]"></div>
+                        
+                        {/* Botão Apple */}
                         <button
                             type="button"
                             onClick={handleAppleSignIn}

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../App';
 import { Page, Role, OrderStatus, User, Message, UploadedFile } from '../types';
-import { MOCK_USERS } from '../constants';
+import { MOCK_USERS } from '../data/mocks';
 import { DownloadIcon, FileIcon, PaperclipIcon, SendIcon, TrashIcon } from '../components/icons/Icons';
 import StatusBadge from '../components/StatusBadge';
 import Payment from '../components/Payment';

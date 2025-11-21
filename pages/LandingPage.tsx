@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../App';
 import { SERVICES } from '../constants';
@@ -149,6 +150,7 @@ const LandingPage: React.FC = () => {
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {mainServices.map((service, index) => {
                             const Icon = serviceIcons[service.id] || FileTextIcon;
+                            const isQuote = service.price === null;
                             return (
                                 <div 
                                     key={service.id} 
@@ -163,8 +165,8 @@ const LandingPage: React.FC = () => {
                                             <h3 className="text-xl font-semibold text-gray-900 mb-2">{service.name}</h3>
                                             <p className="text-gray-600 text-sm mb-3 text-justify">{service.description}</p>
                                             <div className="flex items-center gap-4 text-sm">
-                                                <span className="text-blue-600 font-bold text-lg">{service.price ? `R$ ${service.price.toFixed(2).replace('.', ',')}` : 'Sob Consulta'}</span>
-                                                <span className="text-gray-500">• {service.duration}</span>
+                                                {/* Preço removido para exibição apenas na contratação */}
+                                                <span className="text-gray-500 font-medium">{service.duration}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -176,11 +178,17 @@ const LandingPage: React.FC = () => {
                                             </li>
                                         ))}
                                     </ul>
+                                    {isQuote && (
+                                        <div className="flex items-center gap-2 mb-3 text-xs text-blue-700 font-medium bg-blue-50 p-2 rounded border border-blue-100">
+                                            <ClockIcon className="h-4 w-4" />
+                                            <span>Orçamento retornado em até 24h</span>
+                                        </div>
+                                    )}
                                     <button
                                         onClick={handleOrderClick}
-                                        className="logo-sheen w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold transition-all shadow-lg transform hover:scale-105 mt-auto"
+                                        className="logo-sheen w-full py-2 rounded-lg font-semibold transition-all shadow-lg transform hover:scale-105 mt-auto bg-green-600 hover:bg-green-700 text-white"
                                     >
-                                        Contratar Serviço
+                                        {isQuote ? 'Solicitar Orçamento' : 'Contratar Serviço'}
                                     </button>
                                 </div>
                             );
@@ -190,6 +198,7 @@ const LandingPage: React.FC = () => {
                       <div className="mt-8 flex justify-center">
                         {(() => {
                            const Icon = serviceIcons[specialService.id] || FileTextIcon;
+                           const isQuote = specialService.price === null;
                            return (
                                 <div 
                                     key={specialService.id} 
@@ -204,8 +213,8 @@ const LandingPage: React.FC = () => {
                                             <h3 className="text-xl font-semibold text-gray-900 mb-2">{specialService.name}</h3>
                                             <p className="text-gray-600 text-sm mb-3 text-justify">{specialService.description}</p>
                                             <div className="flex items-center gap-4 text-sm">
-                                                <span className="text-blue-600 font-bold text-lg">{specialService.price ? `R$ ${specialService.price.toFixed(2).replace('.', ',')}` : 'Sob Consulta'}</span>
-                                                <span className="text-gray-500">• {specialService.duration}</span>
+                                                 {/* Preço removido para exibição apenas na contratação */}
+                                                <span className="text-gray-500 font-medium">{specialService.duration}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -217,11 +226,17 @@ const LandingPage: React.FC = () => {
                                             </li>
                                         ))}
                                     </ul>
+                                    {isQuote && (
+                                        <div className="flex items-center gap-2 mb-3 text-xs text-blue-700 font-medium bg-blue-50 p-2 rounded border border-blue-100">
+                                            <ClockIcon className="h-4 w-4" />
+                                            <span>Orçamento retornado em até 24h</span>
+                                        </div>
+                                    )}
                                     <button
                                         onClick={handleOrderClick}
-                                        className="logo-sheen w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-semibold transition-all shadow-lg transform hover:scale-105 mt-auto"
+                                        className="logo-sheen w-full py-2 rounded-lg font-semibold transition-all shadow-lg transform hover:scale-105 mt-auto bg-green-600 hover:bg-green-700 text-white"
                                     >
-                                        Contratar Serviço
+                                        {isQuote ? 'Solicitar Orçamento' : 'Contratar Serviço'}
                                     </button>
                                 </div>
                            );
