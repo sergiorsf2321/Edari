@@ -1,63 +1,116 @@
-
 import { Order, User } from "../types";
 
 /**
  * Este serviço simula o envio de notificações transacionais.
- * No Backend Real, isso seria substituído por integrações com:
- * - E-mail: SendGrid, AWS SES, Resend, etc.
- * - WhatsApp: Twilio, Z-API, WPPConnect, etc.
+ * 
+ * IMPORTANTE PARA O BACKEND (Opus 4):
+ * Os logs abaixo exibem a estrutura JSON EXATA que deve ser enviada
+ * para as APIs da AWS SES (E-mail) e WhatsApp Cloud API (Meta).
+ * Basta copiar a estrutura do payload e implementar a chamada HTTP/SDK.
  */
 
 export const NotificationService = {
     sendWelcomeEmail: async (user: User) => {
-        console.log(`%c[EMAIL SIMULATION]`, 'color: blue; font-weight: bold');
-        console.log(`To: ${user.email}`);
-        console.log(`Subject: Bem-vindo à EDARI!`);
-        console.log(`Body: Olá ${user.name}, sua conta foi criada com sucesso. Clique no link para confirmar seu e-mail.`);
-        // Aqui entraria a chamada real para a API de e-mail
+        console.group('%c[AWS SES PAYLOAD - Welcome Email]', 'color: #ff9900; font-weight: bold');
+        console.log('Simulando envio para AWS SES SDK (ses.sendEmail):');
+        console.log({
+            Source: "Edari <nao-responda@edari.com.br>",
+            Destination: { 
+                ToAddresses: [user.email] 
+            },
+            Message: {
+                Subject: { 
+                    Data: "Bem-vindo à EDARI! Confirme sua conta." 
+                },
+                Body: {
+                    Html: { 
+                        Data: `<html><body><h1>Olá ${user.name}</h1><p>Sua conta foi criada. <a href="https://edari.com.br/confirm?token=xyz">Clique aqui</a>.</p></body></html>` 
+                    }
+                }
+            }
+        });
+        console.groupEnd();
     },
 
     sendOrderStatusUpdate: async (order: Order, oldStatus: string) => {
         const client = order.client;
         
-        // Mensagem baseada no novo status
-        let subject = '';
-        let messageBody = '';
-        let whatsAppMessage = '';
+        // Definição dos templates de mensagem
+        let emailSubject = '';
+        let emailBody = '';
+        let whatsappTemplateName = '';
+        let whatsappParams: string[] = [];
 
         switch (order.status) {
             case 'PENDING':
-                subject = `Orçamento Disponível - Pedido #${order.id}`;
-                messageBody = `Olá ${client.name}, o orçamento para o serviço "${order.service.name}" já está disponível em seu painel. Valor: R$ ${order.total}.`;
-                whatsAppMessage = `Olá ${client.name}! O orçamento do seu pedido EDARI #${order.id} está pronto. Acesse o painel para conferir: https://edari.com.br`;
+                // Orçamento Disponível
+                emailSubject = `Orçamento Disponível - Pedido #${order.id}`;
+                emailBody = `Olá ${client.name}, o orçamento para o serviço <strong>${order.service.name}</strong> já está disponível. Valor: R$ ${order.total}.`;
+                
+                whatsappTemplateName = 'orcamento_disponivel';
+                whatsappParams = [client.name.split(' ')[0], order.id, `R$ ${order.total}`];
                 break;
+
             case 'IN_PROGRESS':
-                subject = `Pagamento Confirmado - Pedido #${order.id}`;
-                messageBody = `Recebemos seu pagamento! Um analista já está cuidando do seu caso.`;
-                whatsAppMessage = `Edari Informa: Pagamento do pedido #${order.id} confirmado! Já iniciamos os trabalhos.`;
+                // Pagamento Confirmado
+                emailSubject = `Pagamento Confirmado - Pedido #${order.id}`;
+                emailBody = `Recebemos seu pagamento! Um analista já está cuidando do seu caso.`;
+                
+                whatsappTemplateName = 'pagamento_confirmado';
+                whatsappParams = [client.name.split(' ')[0], order.id];
                 break;
+
             case 'COMPLETED':
-                subject = `Pedido Concluído - Pedido #${order.id}`;
-                messageBody = `Boas notícias! Seu pedido foi concluído. Acesse a plataforma para baixar seus documentos.`;
-                whatsAppMessage = `Olá ${client.name}! Seu processo na Edari (Pedido #${order.id}) foi concluído com sucesso! Acesse seu painel para ver os detalhes.`;
+                // Concluído
+                emailSubject = `Pedido Concluído - Pedido #${order.id}`;
+                emailBody = `Boas notícias! Seu pedido foi concluído. Acesse a plataforma para baixar seus documentos.`;
+                
+                whatsappTemplateName = 'pedido_concluido';
+                whatsappParams = [client.name.split(' ')[0], order.id];
                 break;
+
             default:
-                return; // Não notificar outros status por enquanto
+                return;
         }
 
-        // Simula envio de E-mail
-        console.log(`%c[EMAIL UPDATE]`, 'color: blue; font-weight: bold');
-        console.log(`To: ${client.email}`);
-        console.log(`Subject: ${subject}`);
-        console.log(`Body: ${messageBody}`);
+        // 1. Simulação AWS SES
+        console.group('%c[AWS SES PAYLOAD - Status Update]', 'color: #ff9900; font-weight: bold');
+        console.log({
+            Source: "Edari <notificacoes@edari.com.br>",
+            Destination: { ToAddresses: [client.email] },
+            Message: {
+                Subject: { Data: emailSubject },
+                Body: { Html: { Data: `<html><body><p>${emailBody}</p></body></html>` } }
+            }
+        });
+        console.groupEnd();
 
-        // Simula envio de WhatsApp (se tiver telefone)
+        // 2. Simulação WhatsApp Cloud API (Meta)
         if (client.phone) {
-            console.log(`%c[WHATSAPP UPDATE]`, 'color: green; font-weight: bold');
-            console.log(`To: ${client.phone}`);
-            console.log(`Message: ${whatsAppMessage}`);
+            // Formatar telefone (remover caracteres e adicionar DDI 55 se necessário)
+            const cleanPhone = client.phone.replace(/\D/g, '');
+            const formattedPhone = cleanPhone.length <= 11 ? `55${cleanPhone}` : cleanPhone;
+
+            console.group('%c[WHATSAPP CLOUD API PAYLOAD]', 'color: #25D366; font-weight: bold');
+            console.log('POST https://graph.facebook.com/v17.0/YOUR_PHONE_ID/messages');
+            console.log({
+                messaging_product: "whatsapp",
+                to: formattedPhone,
+                type: "template",
+                template: {
+                    name: whatsappTemplateName,
+                    language: { code: "pt_BR" },
+                    components: [
+                        {
+                            type: "body",
+                            parameters: whatsappParams.map(text => ({ type: "text", text }))
+                        }
+                    ]
+                }
+            });
+            console.groupEnd();
         } else {
-            console.warn(`[WHATSAPP FAILED] Usuário ${client.name} não possui telefone cadastrado.`);
+            console.warn(`[WHATSAPP SKIPPED] Usuário ${client.name} sem telefone.`);
         }
     }
 };
