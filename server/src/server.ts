@@ -1,225 +1,199 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express from 'express';
 import cors from 'cors';
-import { PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { z } from 'zod';
+import multer from 'multer';
+import { PrismaClient } from '@prisma/client';
+import { uploadFileToS3 } from './services/s3';
+import { sendEmail } from './services/ses';
+import { sendWhatsAppMessage } from './services/whatsapp';
+import { createPixPayment } from './services/mercadopago';
 
-// --- Configuração ---
 const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'secret-dev';
 
-app.use(cors());
-app.use(express.json());
+const upload = multer({ storage: multer.memoryStorage() });
 
-// --- Middlewares ---
+// Middlewares
+app.use(cors() as any); 
+app.use(express.json() as any);
 
-// Estende a interface do Request para incluir o usuário
-interface AuthRequest extends Request {
-  user?: { id: string; role: string };
-}
-
-const authenticate = (req: Request, res: Response, next: NextFunction) => {
+// Middleware de Autenticação
+const authenticate = (req: any, res: any, next: any) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).json({ error: 'Token não fornecido' });
+  if (!authHeader) return res.status(401).json({ error: 'Token ausente' });
 
   const token = authHeader.split(' ')[1];
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { id: string; role: string };
-    (req as AuthRequest).user = decoded;
+    const decoded = jwt.verify(token, JWT_SECRET) as any;
+    req.user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido' });
   }
 };
 
-// --- Schemas de Validação (Zod) ---
-const RegisterSchema = z.object({
-  name: z.string().min(3),
-  email: z.string().email(),
-  password: z.string().min(6),
-  cpf: z.string().optional(),
-  phone: z.string().optional(),
-  address: z.string().optional(),
-});
+// --- ROTAS ---
 
-const OrderCreateSchema = z.object({
-  serviceId: z.string(),
-  details: z.record(z.any()),
-  description: z.string().optional(),
-  // Documentos seriam tratados via upload separado
-});
-
-// --- Rotas de Autenticação ---
-
-app.post('/api/auth/register', async (req: Request, res: Response) => {
+// Cadastro
+app.post('/api/auth/register', async (req: any, res: any) => {
   try {
-    const data = RegisterSchema.parse(req.body);
+    const { name, email, password, cpf, phone, address, birthDate } = req.body;
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) return res.status(400).json({ message: 'E-mail já cadastrado.' });
+
+    const passwordHash = password ? await bcrypt.hash(password, 10) : null;
     
-    const existingUser = await prisma.user.findUnique({ where: { email: data.email } });
-    if (existingUser) return res.status(400).json({ error: 'Email já cadastrado' });
-
-    const passwordHash = await bcrypt.hash(data.password, 10);
-
     const user = await prisma.user.create({
-      data: {
-        name: data.name,
-        email: data.email,
-        passwordHash,
-        cpf: data.cpf,
-        phone: data.phone,
-        address: data.address,
-        role: 'CLIENT',
-      },
+      data: { name, email, passwordHash, cpf, phone, address, birthDate }
     });
 
-    // TODO: Disparar e-mail de boas-vindas (AWS SES)
-
+    await sendEmail(email, "Bem-vindo à Edari!", `<h1>Olá ${name}</h1><p>Seu cadastro foi realizado com sucesso.</p>`);
+    
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role } });
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || 'Erro no cadastro' });
+    res.status(201).json({ token, user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Erro ao criar conta.' });
   }
 });
 
-app.post('/api/auth/login', async (req: Request, res: Response) => {
+// Login
+app.post('/api/auth/login', async (req: any, res: any) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user) return res.status(401).json({ message: 'Credenciais inválidas.' });
+    
+    // Se o usuário não tem senha (login social), não pode logar por senha
+    if (!user.passwordHash) return res.status(401).json({ message: 'Use o login social.' });
 
-    if (!user || !user.passwordHash) {
-      return res.status(401).json({ error: 'Credenciais inválidas' });
-    }
-
-    const validPassword = await bcrypt.compare(password, user.passwordHash);
-    if (!validPassword) return res.status(401).json({ error: 'Credenciais inválidas' });
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isValid) return res.status(401).json({ message: 'Credenciais inválidas.' });
 
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, role: user.role, isVerified: user.isVerified } });
+    res.json({ token, user });
   } catch (error) {
-    res.status(500).json({ error: 'Erro interno no servidor' });
+    res.status(500).json({ message: 'Erro no login.' });
   }
 });
 
-// --- Rotas de Pedidos ---
-
-app.get('/api/orders', authenticate, async (req: Request, res: Response) => {
-  try {
-    const user = (req as AuthRequest).user!;
-    let where = {};
-
-    if (user.role === 'CLIENT') {
-      where = { clientId: user.id };
-    } else if (user.role === 'ANALYST') {
-      where = { analystId: user.id };
+// Atualizar Perfil
+app.patch('/api/auth/profile', authenticate, async (req: any, res: any) => {
+    try {
+        const { cpf, address, phone } = req.body;
+        const updated = await prisma.user.update({ where: { id: req.user.id }, data: { cpf, address, phone } });
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao atualizar perfil' });
     }
-    // Admin vê tudo (objeto vazio)
-
-    const orders = await prisma.order.findMany({
-      where,
-      include: {
-        service: true,
-        client: { select: { id: true, name: true, email: true } },
-        analyst: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    res.json(orders);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar pedidos' });
-  }
 });
 
-app.post('/api/orders', authenticate, async (req: Request, res: Response) => {
-  try {
-    const user = (req as AuthRequest).user!;
-    const data = OrderCreateSchema.parse(req.body);
-
-    // Busca o serviço para saber o preço base
-    const service = await prisma.service.findUnique({ where: { id: data.serviceId } });
-    if (!service) return res.status(404).json({ error: 'Serviço não encontrado' });
-
-    const initialStatus = service.basePrice ? 'PENDING' : 'AWAITING_QUOTE';
-    const totalAmount = service.basePrice || 0;
-
-    const order = await prisma.order.create({
-      data: {
-        clientId: user.id,
-        serviceId: data.serviceId,
-        details: data.details,
-        description: data.description,
-        status: initialStatus,
-        totalAmount: totalAmount,
-      },
-    });
-
-    res.status(201).json(order);
-  } catch (error: any) {
-    res.status(400).json({ error: error.message || 'Erro ao criar pedido' });
-  }
+// Listar Pedidos
+app.get('/api/orders', authenticate, async (req: any, res: any) => {
+  const { id, role } = req.user;
+  const where = role === 'CLIENT' ? { clientId: id } : role === 'ANALYST' ? { analystId: id } : {};
+  const orders = await prisma.order.findMany({ where, include: { service: true, client: true, analyst: true }, orderBy: { createdAt: 'desc' } });
+  res.json(orders);
 });
 
-app.get('/api/orders/:id', authenticate, async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+// Detalhe do Pedido
+app.get('/api/orders/:id', authenticate, async (req: any, res: any) => {
     const order = await prisma.order.findUnique({
-      where: { id },
-      include: {
-        service: true,
-        client: true,
-        analyst: true,
-        documents: true,
-        messages: {
-          include: { sender: { select: { id: true, name: true, role: true } } },
-          orderBy: { createdAt: 'asc' }
-        }
-      }
+        where: { id: req.params.id },
+        include: { service: true, client: true, analyst: true, documents: true, messages: { include: { sender: true }, orderBy: { createdAt: 'asc' } } }
     });
-
-    if (!order) return res.status(404).json({ error: 'Pedido não encontrado' });
-    
-    // Controle de Acesso Básico
-    const user = (req as AuthRequest).user!;
-    if (user.role === 'CLIENT' && order.clientId !== user.id) {
-      return res.status(403).json({ error: 'Acesso negado' });
-    }
-
+    if (!order) return res.status(404).json({ message: 'Pedido não encontrado' });
     res.json(order);
-  } catch (error) {
-    res.status(500).json({ error: 'Erro ao buscar detalhes' });
-  }
 });
 
-// --- Webhook de Pagamento (Mercado Pago) ---
-
-app.post('/api/webhooks/mp', async (req: Request, res: Response) => {
-  // Validação de segurança deve ser feita aqui (verificar signature)
-  console.log('Webhook Mercado Pago Recebido:', req.body);
-
-  try {
-    const { type, data } = req.body;
-    if (type === 'payment') {
-        // Aqui você consultaria a API do MP para confirmar o status
-        // const payment = await mp.payment.get(data.id);
-        // if (payment.status === 'approved') ...
+// Criar Pedido
+app.post('/api/orders', authenticate, async (req: any, res: any) => {
+    try {
+        const { serviceId, details, description } = req.body;
+        const service = await prisma.service.findUnique({ where: { id: serviceId } });
         
-        // Simulando aprovação: buscar order pela external_reference (que seria o ID do pedido)
-        // await prisma.order.update({ where: { id: ... }, data: { status: 'IN_PROGRESS', paymentConfirmedAt: new Date() } });
-        
-        // TODO: Enviar notificações WhatsApp/Email
+        if (!service) return res.status(400).json({ message: 'Serviço inválido' });
+
+        const status = service.basePrice ? 'PENDING' : 'AWAITING_QUOTE';
+        const totalAmount = service.basePrice ? Number(service.basePrice) : 0;
+
+        const order = await prisma.order.create({
+            data: { clientId: req.user.id, serviceId, details: details || {}, description, status, totalAmount }
+        });
+        res.status(201).json(order);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Erro ao criar pedido' });
     }
-    res.status(200).send();
-  } catch (error) {
-    console.error(error);
-    res.status(500).send();
-  }
 });
 
+// Upload de Arquivo
+app.post('/api/orders/:id/upload', authenticate, upload.single('file'), async (req: any, res: any) => {
+    try {
+        if (!req.file) return res.status(400).json({ message: 'Arquivo ausente' });
+        const publicUrl = await uploadFileToS3(req.file, `orders/${req.params.id}`);
+        const doc = await prisma.document.create({
+            data: { orderId: req.params.id, name: req.file.originalname, mimeType: req.file.mimetype, size: req.file.size, s3Key: publicUrl }
+        });
+        res.status(201).json(doc);
+    } catch (error) {
+        res.status(500).json({ message: 'Falha no upload' });
+    }
+});
 
-// --- Inicialização ---
+// Atualizar Pedido
+app.patch('/api/orders/:id', authenticate, async (req: any, res: any) => {
+    try {
+        const updated = await prisma.order.update({ where: { id: req.params.id }, data: req.body, include: { client: true, service: true } });
+        
+        // Gatilho de Notificação (Orçamento Disponível)
+        if (req.body.status === 'PENDING' && updated.totalAmount > 0 && updated.client.phone) {
+            await sendWhatsAppMessage(updated.client.phone, 'orcamento_disponivel', [updated.client.name.split(' ')[0], updated.id, updated.totalAmount.toString()]);
+        }
+        res.json(updated);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao atualizar' });
+    }
+});
+
+// Enviar Mensagem
+app.post('/api/orders/:id/messages', authenticate, async (req: any, res: any) => {
+    const message = await prisma.message.create({
+        data: { orderId: req.params.id, senderId: req.user.id, content: req.body.content },
+        include: { sender: true }
+    });
+    res.status(201).json(message);
+});
+
+// Gerar PIX
+app.post('/api/payments', authenticate, async (req: any, res: any) => {
+    try {
+        const { orderId } = req.body;
+        const order = await prisma.order.findUnique({ where: { id: orderId }, include: { client: true } });
+        
+        if (!order) return res.status(404).json({ message: 'Pedido não encontrado' });
+
+        const pix = await createPixPayment(order.id, Number(order.totalAmount), order.client.email, order.client.name);
+        
+        await prisma.order.update({ where: { id: orderId }, data: { paymentId: pix.id.toString(), paymentMethod: 'pix' } });
+        
+        res.json({ qrCodeUrl: `data:image/png;base64,${pix.qr_code_base64}`, pixCopyPaste: pix.qr_code });
+    } catch (error) {
+        res.status(500).json({ message: 'Erro no pagamento' });
+    }
+});
+
+// Webhook Mercado Pago
+app.post('/api/webhooks/mp', async (req: any, res: any) => {
+    console.log("Webhook MP recebido:", req.body);
+    // Lógica: Verificar status no MP e atualizar pedido para IN_PROGRESS
+    res.sendStatus(200);
+});
+
 app.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Servidor rodando na porta ${PORT}`);
 });

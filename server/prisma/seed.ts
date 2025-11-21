@@ -1,6 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import bcrypt from 'bcryptjs';
-import process from 'process';
+const { PrismaClient } = require('@prisma/client');
+const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
@@ -15,9 +14,8 @@ const SERVICES = [
 ];
 
 async function main() {
-  console.log('Start seeding...');
+  console.log('Iniciando seed...');
 
-  // Seed Services
   for (const service of SERVICES) {
     await prisma.service.upsert({
       where: { id: service.id },
@@ -26,7 +24,6 @@ async function main() {
     });
   }
 
-  // Seed Admin User
   const passwordHash = await bcrypt.hash('admin123', 10);
   await prisma.user.upsert({
     where: { email: 'admin@edari.com.br' },
@@ -37,10 +34,11 @@ async function main() {
       role: 'ADMIN',
       passwordHash,
       isVerified: true,
+      phone: '5511999999999'
     },
   });
 
-  console.log('Seeding finished.');
+  console.log('Seed finalizado.');
 }
 
 main()

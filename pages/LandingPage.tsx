@@ -90,7 +90,7 @@ const LandingPage: React.FC = () => {
                 <div className="max-w-6xl mx-auto relative z-10">
                     <div className="text-center">
                         <h1 className={`text-4xl md:text-6xl font-extrabold mb-6 tracking-tight leading-tight transition-all duration-1000 ease-out ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>
-                          <span className="logo-sheen inline-block py-2 px-1">A adequação registral que seu imóvel <span className="text-brand-accent">precisa</span>. A <span className="text-brand-accent">eficiência</span> que <span className="text-brand-accent">você</span> busca.</span>
+                          <span className="inline-block py-2 px-1 transition-transform duration-500 hover:scale-105 cursor-default">A regularização que seu imóvel <span className="text-brand-accent">precisa</span>. A <span className="text-brand-accent">eficiência</span> que <span className="text-brand-accent">você</span> busca.</span>
                         </h1>
                         <p className={`text-xl md:text-2xl text-blue-200 max-w-3xl mx-auto mb-8 transition-all duration-1000 ease-out delay-300 ${isLoaded ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'}`}>Da busca em cartórios ao suporte no protocolo via ONR, realizamos a conferência de requisitos e a preparação de processos completos, assegurando a conformidade técnica e a regularidade formal do seu patrimônio.</p>
                         <button 
@@ -164,9 +164,9 @@ const LandingPage: React.FC = () => {
                                         <div className="flex-1">
                                             <h3 className="text-xl font-semibold text-gray-900 mb-2">{service.name}</h3>
                                             <p className="text-gray-600 text-sm mb-3 text-justify">{service.description}</p>
-                                            <div className="flex items-center gap-4 text-sm">
-                                                {/* Preço removido para exibição apenas na contratação */}
-                                                <span className="text-gray-500 font-medium">{service.duration}</span>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                                                <ClockIcon className="h-4 w-4" />
+                                                <span>{service.duration}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -212,9 +212,9 @@ const LandingPage: React.FC = () => {
                                         <div className="flex-1">
                                             <h3 className="text-xl font-semibold text-gray-900 mb-2">{specialService.name}</h3>
                                             <p className="text-gray-600 text-sm mb-3 text-justify">{specialService.description}</p>
-                                            <div className="flex items-center gap-4 text-sm">
-                                                 {/* Preço removido para exibição apenas na contratação */}
-                                                <span className="text-gray-500 font-medium">{specialService.duration}</span>
+                                            <div className="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                                                <ClockIcon className="h-4 w-4" />
+                                                <span>{specialService.duration}</span>
                                             </div>
                                         </div>
                                     </div>

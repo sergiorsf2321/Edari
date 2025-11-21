@@ -1,3 +1,4 @@
+
 import { Service, ServiceId, User, Role, Order, OrderStatus } from './types';
 
 export const SERVICES: Service[] = [
@@ -6,7 +7,7 @@ export const SERVICES: Service[] = [
     name: 'Pesquisa Registral de Matrículas',
     description: 'Localizamos e solicitamos matrículas de imóveis buscando por CPF/CNPJ nos cartórios.',
     price: 49.90,
-    duration: 'Até 6 dias úteis',
+    duration: '5 a 10 dias úteis',
     features: [
       'Busca por CPF ou CNPJ',
       'Retorna até 10 matrículas por pesquisa',
@@ -19,7 +20,7 @@ export const SERVICES: Service[] = [
     name: 'Certidão Digital',
     description: 'Obtenção de certidões oficiais com validade jurídica.',
     price: 349.90,
-    duration: 'Até 6 dias úteis',
+    duration: '5 a 10 dias úteis',
     features: [
       'Documento oficial com validade jurídica',
       'Assinatura eletrônica do cartório',
@@ -70,7 +71,7 @@ export const SERVICES: Service[] = [
     name: 'Relatório de Conformidade de Matrícula',
     description: 'Analisamos a matrícula e entregamos um relatório detalhado de conformidade, indicando as pendências administrativas e documentais para a adequação.',
     price: 199.90,
-    duration: 'Até 4 dias úteis',
+    duration: '5 a 10 dias úteis',
     features: [
       'Análise técnica da matrícula',
       'Identificação de pendências registrais',

@@ -1,84 +1,129 @@
-import React from 'react';
-import { XIcon } from './icons/Icons';
+
+import React, { useState, useEffect } from 'react';
+import { XIcon, ShieldCheckIcon, FileTextIcon } from './icons/Icons';
 
 interface PrivacyPolicyModalProps {
     isOpen: boolean;
     onClose: () => void;
+    initialTab?: 'privacy' | 'lgpd';
 }
 
-const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, onClose }) => {
+const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, onClose, initialTab = 'privacy' }) => {
+    const [activeTab, setActiveTab] = useState<'privacy' | 'lgpd'>(initialTab);
+
+    useEffect(() => {
+        if (isOpen) {
+            setActiveTab(initialTab);
+        }
+    }, [isOpen, initialTab]);
+
     if (!isOpen) return null;
 
     return (
         <div 
-            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center"
+            className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4"
             onClick={onClose}
             aria-modal="true"
             role="dialog"
         >
             <div 
-                className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col"
+                className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col"
                 onClick={e => e.stopPropagation()}
             >
+                {/* Header */}
                 <div className="flex justify-between items-center p-4 border-b">
-                    <h2 className="text-xl font-bold text-brand-primary">Política de Privacidade</h2>
+                    <h2 className="text-xl font-bold text-brand-primary">Central de Privacidade</h2>
                     <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
                         <XIcon className="h-6 w-6" />
                     </button>
                 </div>
-                <div className="p-6 overflow-y-auto text-sm text-slate-700 space-y-4 text-justify">
-                    <p><strong>Última atualização:</strong> {new Date().toLocaleDateString('pt-BR')}</p>
-                    <p>A sua privacidade é de extrema importância para a EDARI - Análise Documental Imobiliária ("EDARI", "nós"). Esta Política de Privacidade descreve como coletamos, usamos, armazenamos, compartilhamos e protegemos suas informações pessoais em conformidade com a Lei Geral de Proteção de Dados Pessoais (LGPD - Lei nº 13.709/2018).</p>
-                    
-                    <h3 className="font-bold text-slate-800">1. Informações que Coletamos</h3>
-                    <p>Coletamos as seguintes informações pessoais para criar sua conta e prestar nossos serviços:</p>
-                    <ul className="list-disc list-inside space-y-1 pl-4">
-                        <li><strong>Nome Completo:</strong> Para identificação pessoal.</li>
-                        <li><strong>E-mail:</strong> Para comunicação, login e envio de notificações importantes.</li>
-                        <li><strong>CPF:</strong> Para verificação de identidade e cumprimento de exigências legais em transações imobiliárias e fiscais.</li>
-                        <li><strong>Data de Nascimento:</strong> Para verificação de maioridade legal.</li>
-                        <li><strong>Endereço Completo:</strong> Para faturamento e correspondência.</li>
-                        <li><strong>Documentos e Informações de Pedidos:</strong> Arquivos e dados que você nos envia para a prestação dos serviços contratados.</li>
-                    </ul>
 
-                    <h3 className="font-bold text-slate-800">2. Finalidade da Coleta de Dados</h3>
-                    <p>Utilizamos seus dados para:</p>
-                     <ul className="list-disc list-inside space-y-1 pl-4">
-                        <li><strong>Prestação de Serviços:</strong> Realizar as análises documentais, pesquisas, emissão de certidões e outros serviços contratados.</li>
-                        <li><strong>Comunicação:</strong> Enviar atualizações sobre seus pedidos, orçamentos, e responder às suas solicitações.</li>
-                        <li><strong>Cumprimento de Obrigações Legais:</strong> Utilizar dados como CPF em processos junto a cartórios, prefeituras e outros órgãos públicos, conforme necessário para a execução dos serviços.</li>
-                        <li><strong>Segurança:</strong> Prevenir fraudes e garantir a segurança da sua conta e da nossa plataforma.</li>
-                        <li><strong>Faturamento:</strong> Processar pagamentos pelos serviços prestados.</li>
-                    </ul>
-
-                    <h3 className="font-bold text-slate-800">3. Compartilhamento de Informações</h3>
-                    <p>A EDARI não vende suas informações pessoais. Compartilhamos seus dados apenas quando estritamente necessário para a prestação dos serviços, com:</p>
-                     <ul className="list-disc list-inside space-y-1 pl-4">
-                        <li><strong>Cartórios e Órgãos Públicos:</strong> Para protocolo e andamento dos processos registrais.</li>
-                        <li><strong>Parceiros de Pagamento:</strong> Para processar transações financeiras de forma segura.</li>
-                        <li><strong>Autoridades Judiciais ou Administrativas:</strong> Em caso de requisição legal.</li>
-                    </ul>
-
-                    <h3 className="font-bold text-slate-800">4. Armazenamento e Segurança dos Dados</h3>
-                    <p>Seus dados são armazenados em servidores seguros, e empregamos medidas técnicas e administrativas, como criptografia e controle de acesso, para protegê-los contra acesso não autorizado, alteração, destruição ou perda.</p>
-
-                    <h3 className="font-bold text-slate-800">5. Seus Direitos como Titular dos Dados</h3>
-                    <p>De acordo com a LGPD, você tem o direito de:</p>
-                     <ul className="list-disc list-inside space-y-1 pl-4">
-                        <li><strong>Confirmação e Acesso:</strong> Saber se tratamos seus dados e acessá-los.</li>
-                        <li><strong>Correção:</strong> Solicitar a correção de dados incompletos, inexatos ou desatualizados.</li>
-                        <li><strong>Anonimização, Bloqueio ou Eliminação:</strong> Solicitar a eliminação de dados desnecessários ou tratados em desconformidade com a LGPD.</li>
-                        <li><strong>Portabilidade:</strong> Solicitar a portabilidade dos seus dados a outro fornecedor de serviço.</li>
-                        <li><strong>Informação sobre Compartilhamento:</strong> Saber com quais entidades públicas e privadas compartilhamos seus dados.</li>
-                        <li><strong>Revogação do Consentimento:</strong> Revogar seu consentimento a qualquer momento.</li>
-                    </ul>
-                    <p>Para exercer seus direitos, entre em contato conosco através do e-mail: <strong>privacidade@edari.com.br</strong>.</p>
-                    
-                    <h3 className="font-bold text-slate-800">6. Encarregado de Proteção de Dados (DPO)</h3>
-                    <p>Para qualquer dúvida sobre esta política ou sobre o tratamento de seus dados, entre em contato com nosso Encarregado de Proteção de Dados (DPO) através do e-mail: <strong>dpo@edari.com.br</strong>.</p>
-                    
-                    <p className="font-semibold">Ao criar uma conta na EDARI, você declara que leu, compreendeu e concorda com os termos desta Política de Privacidade.</p>
+                {/* Tabs */}
+                <div className="flex border-b bg-gray-50">
+                    <button 
+                        className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${activeTab === 'privacy' ? 'bg-white text-brand-primary border-t-2 border-brand-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                        onClick={() => setActiveTab('privacy')}
+                    >
+                        <div className="flex items-center justify-center gap-2">
+                            <FileTextIcon className="h-4 w-4" />
+                            Política de Privacidade
+                        </div>
+                    </button>
+                    <button 
+                        className={`flex-1 py-3 text-sm font-bold text-center transition-colors ${activeTab === 'lgpd' ? 'bg-white text-green-600 border-t-2 border-green-600' : 'text-gray-500 hover:text-gray-700'}`}
+                        onClick={() => setActiveTab('lgpd')}
+                    >
+                         <div className="flex items-center justify-center gap-2">
+                            <ShieldCheckIcon className="h-4 w-4" />
+                            Conformidade LGPD
+                        </div>
+                    </button>
                 </div>
+
+                {/* Content */}
+                <div className="p-6 overflow-y-auto text-sm text-slate-700 space-y-4 text-justify flex-grow">
+                    <p className="text-xs text-gray-400 text-right">Última atualização: {new Date().toLocaleDateString('pt-BR')}</p>
+
+                    {activeTab === 'privacy' ? (
+                        <>
+                            <h3 className="text-lg font-bold text-brand-primary mb-2">Política de Privacidade</h3>
+                            <p>A sua privacidade é de extrema importância para a <strong>EDARI - Soluções em Documentação</strong>. Esta Política descreve como coletamos e utilizamos suas informações pessoais.</p>
+                            
+                            <h4 className="font-bold text-slate-800 mt-4">1. Informações que Coletamos</h4>
+                            <p>Coletamos as seguintes informações pessoais estritamente para a prestação de serviços:</p>
+                            <ul className="list-disc list-inside space-y-1 pl-4">
+                                <li><strong>Identificação:</strong> Nome Completo, CPF, Data de Nascimento.</li>
+                                <li><strong>Contato:</strong> E-mail, Telefone/WhatsApp, Endereço Completo.</li>
+                                <li><strong>Dados do Pedido:</strong> Informações sobre imóveis (matrícula, endereço) e documentos anexados (contratos, certidões).</li>
+                            </ul>
+
+                            <h4 className="font-bold text-slate-800 mt-4">2. Finalidade do Uso</h4>
+                            <p>Seus dados são utilizados exclusivamente para:</p>
+                             <ul className="list-disc list-inside space-y-1 pl-4">
+                                <li>Executar os serviços contratados (buscas em cartórios, emissão de certidões, análises).</li>
+                                <li>Processar pagamentos e emitir notas fiscais.</li>
+                                <li>Enviar notificações sobre o status do seu pedido.</li>
+                            </ul>
+
+                            <h4 className="font-bold text-slate-800 mt-4">3. Compartilhamento de Dados</h4>
+                            <p>Não vendemos seus dados. O compartilhamento ocorre apenas quando necessário para a execução do serviço com:</p>
+                             <ul className="list-disc list-inside space-y-1 pl-4">
+                                <li><strong>Cartórios de Registro:</strong> Para solicitação de atos registrais.</li>
+                                <li><strong>Plataformas Governamentais (ONR, etc):</strong> Para protocolo digital.</li>
+                                <li><strong>Processadores de Pagamento:</strong> Para transações financeiras seguras.</li>
+                            </ul>
+                        </>
+                    ) : (
+                        <>
+                            <h3 className="text-lg font-bold text-green-600 mb-2">Conformidade com a LGPD</h3>
+                            <p>A EDARI atua em total conformidade com a Lei Geral de Proteção de Dados Pessoais (Lei nº 13.709/2018). Garantimos transparência e controle sobre seus dados.</p>
+
+                            <h4 className="font-bold text-slate-800 mt-4">1. Base Legal para Tratamento</h4>
+                            <p>O tratamento dos seus dados pessoais é realizado principalmente sob a base legal de <strong>Execução de Contrato</strong> (Art. 7º, V da LGPD), sendo indispensável para a entrega das certidões e serviços de documentação solicitados.</p>
+
+                            <h4 className="font-bold text-slate-800 mt-4">2. Seus Direitos como Titular</h4>
+                            <p>Você possui os seguintes direitos garantidos por lei:</p>
+                             <ul className="list-disc list-inside space-y-1 pl-4">
+                                <li><strong>Confirmação e Acesso:</strong> Saber se tratamos seus dados e solicitar uma cópia.</li>
+                                <li><strong>Correção:</strong> Solicitar a alteração de dados incompletos, inexatos ou desatualizados.</li>
+                                <li><strong>Eliminação:</strong> Solicitar a exclusão de dados pessoais (exceto quando a manutenção for necessária para cumprimento de obrigação legal).</li>
+                                <li><strong>Portabilidade:</strong> Solicitar a transferência dos dados a outro fornecedor.</li>
+                            </ul>
+
+                            <h4 className="font-bold text-slate-800 mt-4">3. Segurança da Informação</h4>
+                            <p>Adotamos medidas técnicas e administrativas robustas para proteger seus dados contra acessos não autorizados e situações acidentais ou ilícitas de destruição, perda ou alteração.</p>
+
+                            <h4 className="font-bold text-slate-800 mt-4">4. Encarregado de Dados (DPO)</h4>
+                            <p>Para exercer seus direitos ou tirar dúvidas sobre o tratamento de seus dados, entre em contato diretamente com nosso canal de privacidade:</p>
+                            <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg text-center">
+                                <p className="font-bold text-green-800">Canal de Atendimento LGPD</p>
+                                <p className="text-green-700">E-mail: <a href="mailto:edari.docs@gmail.com" className="underline">edari.docs@gmail.com</a></p>
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                {/* Footer */}
                 <div className="p-4 bg-gray-50 border-t text-right">
                     <button 
                         onClick={onClose} 
