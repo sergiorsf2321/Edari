@@ -3,10 +3,10 @@ import { User, Role, Order, OrderStatus } from '../types';
 import { SERVICES } from '../constants';
 
 export const MOCK_USERS: User[] = [
-    { id: 'user-1', name: 'Ana Cliente', email: 'ana@cliente.com', role: Role.Client, isVerified: true, cpf: '123.456.789-00', birthDate: '01/01/1990', address: 'Rua Exemplo, 123' },
-    { id: 'user-2', name: 'Bruno Analista', email: 'bruno@analista.com', role: Role.Analyst, isVerified: true },
-    { id: 'user-3', name: 'Carlos Admin', email: 'carlos@admin.com', role: Role.Admin, isVerified: true },
-    { id: 'user-4', name: 'Fernanda Analista', email: 'fernanda@analista.com', role: Role.Analyst, isVerified: true },
+    { id: 'user-1', name: 'Ana Cliente', email: 'ana@cliente.com', role: Role.Client, isVerified: true, cpf: '123.456.789-00', birthDate: '01/01/1990', address: 'Rua Exemplo, 123', phone: '(11) 99999-8888' },
+    { id: 'user-2', name: 'Bruno Analista', email: 'bruno@analista.com', role: Role.Analyst, isVerified: true, phone: '(11) 97777-6666' },
+    { id: 'user-3', name: 'Carlos Admin', email: 'carlos@admin.com', role: Role.Admin, isVerified: true, phone: '(11) 95555-4444' },
+    { id: 'user-4', name: 'Fernanda Analista', email: 'fernanda@analista.com', role: Role.Analyst, isVerified: true, phone: '(11) 93333-2222' },
 ];
 
 export const MOCK_ORDERS: Order[] = [
@@ -50,7 +50,7 @@ export const MOCK_ORDERS: Order[] = [
     },
     {
         id: 'ORD-003',
-        client: { id: 'user-5', name: 'Outro Cliente', email: 'outro@cliente.com', role: Role.Client, isVerified: true, cpf: '987.654.321-00', birthDate: '02/02/1990', address: 'Av Teste, 456' },
+        client: { id: 'user-5', name: 'Outro Cliente', email: 'outro@cliente.com', role: Role.Client, isVerified: true, cpf: '987.654.321-00', birthDate: '02/02/1990', address: 'Av Teste, 456', phone: '(21) 99999-1111' },
         service: SERVICES[2],
         status: OrderStatus.Pending,
         isUrgent: false,

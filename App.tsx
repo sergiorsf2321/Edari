@@ -94,9 +94,9 @@ const App: React.FC = () => {
         }
     }, [addNotification]);
     
-    const registerUser = useCallback(async (name: string, email: string, cpf: string, birthDate: string, address: string) => {
+    const registerUser = useCallback(async (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string) => {
         try {
-            await AuthService.register({ name, email, cpf, birthDate, address });
+            await AuthService.register({ name, email, cpf, birthDate, address, phone });
             setLastRegisteredEmail(email);
             setPage(Page.EmailConfirmation);
             addNotification('Cadastro realizado com sucesso! Confirme seu e-mail.', 'success');

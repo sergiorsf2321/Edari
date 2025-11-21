@@ -1,6 +1,7 @@
 
 import { User, Role } from "../types";
 import { MOCK_USERS } from "../data/mocks";
+import { NotificationService } from "./notificationService";
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -32,6 +33,9 @@ export const AuthService = {
     } as User;
     
     MOCK_USERS.push(newUser);
+    
+    // Dispara notificação de boas-vindas
+    NotificationService.sendWelcomeEmail(newUser);
   },
 
   verifyEmail: async (email: string): Promise<void> => {

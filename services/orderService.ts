@@ -1,6 +1,7 @@
 
 import { Order, UploadedFile, Message } from "../types";
 import { MOCK_ORDERS } from "../data/mocks";
+import { NotificationService } from "./notificationService";
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -29,8 +30,17 @@ export const OrderService = {
     await delay(600);
     const index = MOCK_ORDERS.findIndex(o => o.id === order.id);
     if (index !== -1) {
+        const oldOrder = MOCK_ORDERS[index];
+        const oldStatus = oldOrder.status;
+        
         const updatedOrder = { ...order, updatedAt: new Date() };
         MOCK_ORDERS[index] = updatedOrder;
+        
+        // Se o status mudou, dispara notificação
+        if (oldStatus !== updatedOrder.status) {
+            NotificationService.sendOrderStatusUpdate(updatedOrder, oldStatus);
+        }
+
         return updatedOrder;
     }
     throw new Error("Pedido não encontrado");

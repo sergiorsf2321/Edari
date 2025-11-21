@@ -1,3 +1,4 @@
+
 export enum Role {
   Client = 'CLIENT',
   Analyst = 'ANALYST',
@@ -25,13 +26,14 @@ export interface User {
   cpf?: string;
   birthDate?: string;
   address?: string;
+  phone?: string; // Novo campo para WhatsApp
 }
 
 export enum ServiceId {
   QualifiedSearch = 'qualified_search',
   DigitalCertificate = 'digital_certificate',
   PreAnalysis = 'pre_analysis',
-  RegistryIntermediation = 'registry_intermediation', // Novo serviço
+  RegistryIntermediation = 'registry_intermediation',
   DocPreparation = 'doc_preparation',
   TechnicalReport = 'technical_report',
   DevolutionaryNoteAnalysis = 'devolutionary_note_analysis',
@@ -107,7 +109,7 @@ export interface Notification {
 export interface AuthContextType {
   user: User | null;
   login: (email: string, role: Role) => Promise<boolean>;
-  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string) => Promise<void>;
+  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string) => Promise<void>;
   verifyUser: (email: string) => void;
   logout: () => Promise<void>;
   page: Page;

@@ -13,6 +13,7 @@ const SignupPage: React.FC = () => {
     const [cpf, setCpf] = useState('');
     const [birthDate, setBirthDate] = useState('');
     const [address, setAddress] = useState('');
+    const [phone, setPhone] = useState(''); // Novo estado para telefone
     const [agreedToPolicy, setAgreedToPolicy] = useState(false);
     const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +39,14 @@ const SignupPage: React.FC = () => {
             .replace(/(\d{2})(\d)/, '$1/$2')
             .slice(0, 10);
     };
+    
+    const formatPhone = (value: string) => {
+        return value
+            .replace(/\D/g, '')
+            .replace(/^(\d{2})(\d)/g, '($1) $2')
+            .replace(/(\d)(\d{4})$/, '$1-$2')
+            .slice(0, 15);
+    };
 
     const handleCpfBlur = () => {
         if (cpf && !isValidCPF(cpf)) {
@@ -61,7 +70,7 @@ const SignupPage: React.FC = () => {
             return;
         }
         setIsLoading(true);
-        await registerUser(name, email, cpf, birthDate, address);
+        await registerUser(name, email, cpf, birthDate, address, phone);
         setIsLoading(false);
     };
 
@@ -102,6 +111,10 @@ const SignupPage: React.FC = () => {
                                         <label htmlFor="birthDate" className="block text-sm font-medium mb-1 text-slate-700">Data de Nascimento</label>
                                         <input id="birthDate" type="text" value={birthDate} onChange={e => setBirthDate(formatDate(e.target.value))} placeholder="DD/MM/AAAA" className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required />
                                     </div>
+                                </div>
+                                <div>
+                                    <label htmlFor="phone" className="block text-sm font-medium mb-1 text-slate-700">Celular / WhatsApp</label>
+                                    <input id="phone" type="text" value={phone} onChange={e => setPhone(formatPhone(e.target.value))} placeholder="(11) 99999-9999" className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required />
                                 </div>
                                 <div>
                                     <label htmlFor="address" className="block text-sm font-medium mb-1 text-slate-700">Endereço Completo</label>
