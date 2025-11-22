@@ -1,7 +1,7 @@
 import { AuthContextType } from "../types";
 
 // ALTERE ESTA URL APÓS O DEPLOY DO BACKEND
-const PROD_API_URL = 'https://edari-api.onrender.com/api'; 
+const PROD_API_URL = 'https://edari-api.onrender.com'; 
 
 export const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000/api'
