@@ -1,3 +1,4 @@
+
 import React, { useState, createContext, useContext, useCallback, useEffect } from 'react';
 import { User, Role, Page, AuthContextType, Order, Notification } from './types';
 import { AuthService } from './services/authService';
@@ -53,7 +54,7 @@ const App: React.FC = () => {
     // Recarregar pedidos SOMENTE se o usuário estiver logado
     useEffect(() => {
         const loadOrders = async () => {
-            if (!user) return; // Impede busca sem login
+            if (!user) return; // <--- CORREÇÃO CRÍTICA: Impede busca sem login
             
             try {
                 const fetchedOrders = await OrderService.getOrders();
@@ -81,9 +82,9 @@ const App: React.FC = () => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     }, []);
 
-    const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    const login = useCallback(async (email: string, role: Role): Promise<boolean> => {
         try {
-            const loggedUser = await AuthService.login(email, password);
+            const loggedUser = await AuthService.login(email, role);
             if (loggedUser) {
                 if (!loggedUser.isVerified) {
                     addNotification('Seu e-mail ainda não foi confirmado.', 'error');
@@ -103,9 +104,9 @@ const App: React.FC = () => {
         }
     }, [addNotification]);
     
-    const registerUser = useCallback(async (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string, password: string) => {
+    const registerUser = useCallback(async (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string) => {
         try {
-            await AuthService.register({ name, email, cpf, birthDate, address, phone, password });
+            await AuthService.register({ name, email, cpf, birthDate, address, phone });
             setLastRegisteredEmail(email);
             setPage(Page.EmailConfirmation);
             addNotification('Cadastro realizado com sucesso! Confirme seu e-mail.', 'success');
@@ -153,7 +154,9 @@ const App: React.FC = () => {
 
     const updateOrder = useCallback(async (orderData: Order) => {
         try {
+            // Atualiza no backend simulado
             const updated = await OrderService.updateOrder(orderData);
+            // Atualiza estado local
             setOrders(prevOrders => prevOrders.map(o => o.id === updated.id ? updated : o));
             
             if (selectedOrder?.id === updated.id) {

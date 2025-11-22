@@ -4,12 +4,14 @@ import { Role, Page } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const StaffLoginPage: React.FC = () => {
+    // Login form states
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [role, setRole] = useState<Role>(Role.Analyst);
     const { login, addNotification } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
 
+    // Forgot password states
     const [isForgotPassword, setIsForgotPassword] = useState(false);
     const [forgotEmail, setForgotEmail] = useState('');
     const [resetEmailSent, setResetEmailSent] = useState(false);
@@ -17,17 +19,8 @@ const StaffLoginPage: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        try {
-            // IMPORTANTE: Passando a senha real
-            const success = await login(email, password);
-            if (!success) {
-                addNotification('Falha no login. Verifique suas credenciais.', 'error');
-            }
-        } catch (error: any) {
-            addNotification(error.message || 'Falha no login', 'error');
-        } finally {
-            setIsLoading(false);
-        }
+        await login(email, role);
+        setIsLoading(false);
     };
     
     const handleForgotPassword = async (e: React.FormEvent) => {
@@ -107,21 +100,13 @@ const StaffLoginPage: React.FC = () => {
                                         value={role}
                                         onChange={(e) => {
                                             setRole(e.target.value as Role);
-                                            setEmail('');
-                                            setPassword(''); // Limpar senha também
+                                            setEmail(''); // Reset email when role changes
                                         }}
                                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900"
                                     >
                                         <option value={Role.Analyst}>Analista</option>
                                         <option value={Role.Admin}>Administrador</option>
                                     </select>
-                                </div>
-                                <div className="bg-blue-50 p-3 rounded-lg text-sm text-blue-800">
-                                    {role === Role.Admin ? (
-                                        <p><strong>Admin:</strong> edari.docs@gmail.com / senha: admin123</p>
-                                    ) : (
-                                        <p><strong>Analista:</strong> Use suas credenciais fornecidas pela administração</p>
-                                    )}
                                 </div>
                                 <div>
                                     <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">Email</label>
@@ -136,21 +121,20 @@ const StaffLoginPage: React.FC = () => {
                                     />
                                 </div>
                                 <div>
-                                    <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-2">Senha</label>
+                                    <label htmlFor="password"className="block text-sm font-medium text-slate-700 mb-2">Senha</label>
                                     <input
                                         type="password"
                                         id="password"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900"
-                                        required
-                                        minLength={6}
+                                        placeholder="Qualquer senha funciona"
                                     />
                                 </div>
                            </fieldset>
 
                             <div className="flex items-center justify-end my-4">
-                                <button
+                            <button
                                     type="button"
                                     onClick={() => setIsForgotPassword(true)}
                                     className="text-sm text-brand-secondary hover:underline focus:outline-none"

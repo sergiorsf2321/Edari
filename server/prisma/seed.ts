@@ -26,7 +26,7 @@ async function main() {
   }
 
   // Gera o hash para a senha 'admin123'
-  const passwordHash = await bcrypt.hash('$ergi0F1lh0..J0yc3', 10);
+  const passwordHash = await bcrypt.hash('admin123', 10);
   
   // Criação do Admin
   await prisma.user.upsert({

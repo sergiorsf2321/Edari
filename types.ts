@@ -1,3 +1,4 @@
+
 export enum Role {
   Client = 'CLIENT',
   Analyst = 'ANALYST',
@@ -108,8 +109,8 @@ export interface Notification {
 
 export interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>; // Atualizado para incluir password
-  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string, password: string) => Promise<void>; // Atualizado
+  login: (email: string, role: Role) => Promise<boolean>;
+  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string) => Promise<void>;
   verifyUser: (email: string) => void;
   logout: () => Promise<void>;
   page: Page;
