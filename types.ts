@@ -60,7 +60,7 @@ export interface UploadedFile {
   size: number;
   type: string;
   fileRef?: File;
-  s3Key?: string; // <--- ADICIONADO (Corrige erro no OrderService)
+  s3Key?: string;
 }
 
 export interface Message {
@@ -87,7 +87,7 @@ export interface Order {
   report?: UploadedFile;
   description: string;
   messages: Message[];
-  details?: any; // <--- ADICIONADO (Corrige erro de 'details' missing)
+  details?: any;
 }
 
 export interface CardDetails {
