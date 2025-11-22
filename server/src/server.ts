@@ -38,6 +38,11 @@ const authenticate = (req: any, res: any, next: any) => {
   }
 };
 
+// Rota Raiz para Health Check (Evita Cannot GET /)
+app.get('/', (req: any, res: any) => {
+    res.send('✅ Edari API está online e funcionando!');
+});
+
 // Auth Routes
 app.post('/api/auth/register', async (req: any, res: any) => {
   try {
@@ -81,6 +86,40 @@ app.post('/api/auth/forgot-password', async (req: any, res: any) => {
     res.json({ message: "Se o email existir, enviamos as instruções." });
 });
 
+app.post('/api/auth/social', async (req: any, res: any) => {
+  try {
+    // Nota: Em produção, você deve validar o token com o Google/Apple aqui
+    // usando google-auth-library ou jsonwebtoken
+    const { provider, token } = req.body;
+    
+    // Mock de decodificação (Na vida real, decodifique o token JWT do provider)
+    // const decoded = jwt.decode(token); 
+    
+    // Vamos simular que pegamos o email do token
+    const email = `social_user_${Date.now()}@example.com`; // Placeholder
+    
+    let user = await prisma.user.findUnique({ where: { email } });
+    
+    if (!user) {
+       user = await prisma.user.create({
+           data: {
+               email,
+               name: "Usuário Social",
+               isVerified: true,
+               googleId: provider === 'google' ? 'google_id_placeholder' : undefined,
+               appleId: provider === 'apple' ? 'apple_id_placeholder' : undefined
+           }
+       });
+    }
+    
+    const appToken = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    res.json({ token: appToken, user });
+    
+  } catch (error) {
+      res.status(500).json({ message: "Erro no login social" });
+  }
+});
+
 // Order Routes
 app.get('/api/orders', authenticate, async (req: any, res: any) => {
     const where = req.user.role === 'CLIENT' ? { clientId: req.user.id } : req.user.role === 'ANALYST' ? { analystId: req.user.id } : {};
@@ -103,6 +142,10 @@ app.post('/api/orders', authenticate, async (req: any, res: any) => {
             totalAmount: service.basePrice || 0 
         }
     });
+    
+    // Notificar analistas (opcional)
+    // sendEmail("admin@edari.com.br", "Novo Pedido", `Pedido #${order.id} criado.`);
+    
     res.status(201).json(order);
 });
 
@@ -117,7 +160,14 @@ app.post('/api/orders/:id/upload', authenticate, upload.single('file') as any, a
 
 // Webhook MP
 app.post('/api/webhooks/mp', async (req: any, res: any) => {
-    console.log("Webhook MP:", req.body);
+    console.log("Webhook MP recebido:", req.body);
+    
+    // Lógica básica de tratamento:
+    // 1. Pegar ID do pagamento (req.body.data.id)
+    // 2. Consultar API do Mercado Pago para confirmar status === 'approved'
+    // 3. Atualizar status do pedido no banco
+    
+    // Como não temos a consulta implementada aqui para brevidade, retornamos 200 OK
     res.sendStatus(200);
 });
 
