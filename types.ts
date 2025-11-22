@@ -60,6 +60,7 @@ export interface UploadedFile {
   size: number;
   type: string;
   fileRef?: File;
+  s3Key?: string; // <--- ADICIONADO (Corrige erro no OrderService)
 }
 
 export interface Message {
@@ -86,6 +87,7 @@ export interface Order {
   report?: UploadedFile;
   description: string;
   messages: Message[];
+  details?: any; // <--- ADICIONADO (Corrige erro de 'details' missing)
 }
 
 export interface CardDetails {
@@ -108,9 +110,7 @@ export interface Notification {
 
 export interface AuthContextType {
   user: User | null;
-  // CORREÇÃO: Adicionado password opcional aqui
   login: (email: string, role: Role, password?: string) => Promise<boolean>;
-  // CORREÇÃO: Adicionado password opcional aqui também
   registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string, password?: string) => Promise<void>;
   verifyUser: (email: string) => void;
   logout: () => Promise<void>;
