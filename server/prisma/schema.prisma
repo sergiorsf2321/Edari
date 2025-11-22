@@ -90,7 +90,8 @@ model Document {
   id        String   @id @default(uuid())
   orderId   String
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
+  messages  Message[]
+
   name      String
   s3Key     String   // Caminho no Bucket S3 (ex: orders/123/doc.pdf)
   mimeType  String
@@ -117,5 +118,6 @@ model Message {
 
 @@index([orderId, createdAt])
 }
+
 
 
