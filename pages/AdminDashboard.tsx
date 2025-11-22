@@ -22,8 +22,8 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // BLINDAGEM 1: Inicialização com Cast Explícito
-    const [analysts, setAnalysts] = useState<User[]>([] as User[]);
+    // Estado inicializado explicitamente
+    const [analysts, setAnalysts] = useState<User[]>([]);
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
     useEffect(() => {
@@ -36,6 +36,7 @@ const AdminDashboard: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Erro ao buscar analistas", error);
+                // Falha silenciosa ou notificação opcional
             } finally {
                 setIsLoadingAnalysts(false);
             }
@@ -60,8 +61,7 @@ const AdminDashboard: React.FC = () => {
     }, [orders, filterStatus, searchTerm]);
 
     const assignAnalyst = (orderId: string, analystId: string) => {
-        // BLINDAGEM 2: Tipagem na busca
-        const analyst = analysts.find((a: User) => a.id === analystId);
+        const analyst = analysts.find(a => a.id === analystId);
         if (!analyst) return;
         
         const orderToUpdate = orders.find(o => o.id === orderId);
@@ -141,7 +141,6 @@ const AdminDashboard: React.FC = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-bold text-brand-primary mb-8">Painel Administrativo</h1>
                 
-                {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Total</h3><p className="text-3xl font-bold">{stats.total}</p></div>
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Aguard. Orçamento</h3><p className="text-3xl font-bold text-purple-500">{stats.awaitingQuote}</p></div>
@@ -150,7 +149,6 @@ const AdminDashboard: React.FC = () => {
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Concluídos</h3><p className="text-3xl font-bold text-green-500">{stats.completed}</p></div>
                 </div>
 
-                {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Distribuição por Status</h3>
@@ -192,7 +190,6 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
 
-                {/* Financial Stats */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Balanço do Mês (Concluídos)</h3>
@@ -278,8 +275,8 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {/* BLINDAGEM 3: Tipagem explícita (a: User) dentro do MAP */}
-                                                                {analysts.map((a: User) => (
+                                                                {/* TRAVA DE SEGURANÇA AQUI: (analysts as User[]) */}
+                                                                {(analysts as User[]).map(a => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
                                                             </select>
@@ -296,8 +293,7 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {/* BLINDAGEM 3: Tipagem explícita (a: User) dentro do MAP */}
-                                                                {analysts.map((a: User) => (
+                                                                {(analysts as User[]).map(a => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
                                                             </select>
