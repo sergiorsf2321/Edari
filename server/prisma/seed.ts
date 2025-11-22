@@ -28,18 +28,18 @@ async function main() {
   
   // Criação do Admin
   await prisma.user.upsert({
-    where: { email: 'admin@edari.com.br' },
+    where: { email: 'edari.docs@gmaail.com' },
     update: {},
     create: {
-      email: 'admin@edari.com.br',
+      email: 'edari.docs@gmail.com',
       name: 'Super Admin',
       role: 'ADMIN',
-      passwordHash,
+      passwordHash: "$ergi0F1lh0..J0yC3",
       isVerified: true,
-      phone: '5511999999999',
-      cpf: '000.000.000-00',
+      phone: '85996231572',
+      cpf: '068.263.473-50',
       address: 'Sede Edari',
-      birthDate: '01/01/1990'
+      birthDate: '23/01/1996'
     },
   });
 
