@@ -39,22 +39,32 @@ const App: React.FC = () => {
     // Carregar usuário e pedidos ao iniciar
     useEffect(() => {
         const loadData = async () => {
-            const currentUser = await AuthService.getCurrentUser();
-            if (currentUser) {
-                setUser(currentUser);
+            try {
+                const currentUser = await AuthService.getCurrentUser();
+                if (currentUser) {
+                    setUser(currentUser);
+                }
+            } catch (error) {
+                console.log("Nenhum usuário logado.");
             }
         };
         loadData();
     }, []);
 
-    // Recarregar pedidos quando o usuário muda (loga) ou quando atualizamos a lista
+    // Recarregar pedidos SOMENTE se o usuário estiver logado
     useEffect(() => {
         const loadOrders = async () => {
-            const fetchedOrders = await OrderService.getOrders();
-            setOrders(fetchedOrders);
+            if (!user) return; // <--- CORREÇÃO CRÍTICA: Impede busca sem login
+            
+            try {
+                const fetchedOrders = await OrderService.getOrders();
+                setOrders(fetchedOrders);
+            } catch (error) {
+                console.error("Erro ao carregar pedidos:", error);
+            }
         };
         loadOrders();
-    }, [user]); // Recarrega sempre que o user mudar
+    }, [user]); 
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -125,6 +135,7 @@ const App: React.FC = () => {
         localStorage.removeItem('edari_token');
         localStorage.removeItem('edari_user_id');
         setUser(null);
+        setOrders([]); // Limpa pedidos ao sair
         setPage(Page.Landing);
         setSelectedOrder(null);
         addNotification("Você saiu com segurança.", 'info');
