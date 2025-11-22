@@ -40,7 +40,7 @@ const GlobalLoading: React.FC = () => (
   </div>
 );
 
-// Fallback personalizado para erros em rotas específicas
+// Fallback personalizado para erros
 const ErrorFallback: React.FC<{ onReset?: () => void }> = ({ onReset }) => (
   <div className="min-h-screen flex items-center justify-center bg-slate-50">
     <div className="text-center p-8">
@@ -79,18 +79,13 @@ const App: React.FC = () => {
     const [isAuthLoading, setIsAuthLoading] = useState(true);
     const [globalError, setGlobalError] = useState<string | null>(null);
 
-    // 🔥 Handler global de erros
-    const handleGlobalError = useCallback((error: Error, errorInfo: React.ErrorInfo) => {
-        console.error('Global Error Captured:', error, errorInfo);
+    // Handler global de erros
+    const handleGlobalError = useCallback((error: Error) => {
+        console.error('Global Error Captured:', error);
         setGlobalError(error.message);
-        
-        // Enviar para serviço de monitoramento em produção
-        if (process.env.NODE_ENV === 'production') {
-          // fetch('/api/error-logging', { method: 'POST', body: JSON.stringify({ error, errorInfo }) })
-        }
     }, []);
 
-    // 🔥 Inicialização segura da aplicação
+    // Inicialização da aplicação
     useEffect(() => {
         const initAuth = async () => {
             setIsAuthLoading(true);
@@ -99,7 +94,7 @@ const App: React.FC = () => {
                 if (currentUser) {
                     setUser(currentUser);
                     
-                    // Carregar pedidos em background sem bloquear a UI
+                    // Carregar pedidos em background
                     OrderService.getOrders()
                         .then(setOrders)
                         .catch(err => {
@@ -111,18 +106,17 @@ const App: React.FC = () => {
                         setPage(Page.Dashboard);
                     }
                 }
-            } catch (error: any) {
+            } catch (error) {
                 console.log("Sessão expirada ou inválida.");
-                // Não mostrar erro para sessões expiradas - é comportamento normal
             } finally {
                 setIsAuthLoading(false);
             }
         };
 
         initAuth();
-    }, []);
+    }, [page]);
 
-    // 🔥 Carregar pedidos quando usuário mudar
+    // Carregar pedidos quando usuário mudar
     useEffect(() => {
         if (user) {
             OrderService.getOrders()
@@ -136,12 +130,12 @@ const App: React.FC = () => {
         }
     }, [user]);
 
-    // 🔥 Scroll para topo ao mudar de página
+    // Scroll para topo ao mudar de página
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [page]);
 
-    // 🔥 Sistema de notificações
+    // Sistema de notificações
     const addNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         const id = Date.now() + Math.random();
         const notification: Notification = { id, message, type };
@@ -158,10 +152,10 @@ const App: React.FC = () => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     }, []);
 
-    // 🔥 Sistema de autenticação
+    // Sistema de autenticação
     const login = useCallback(async (email: string, password: string, role?: Role): Promise<boolean> => {
         try {
-            const { user: loggedUser, token } = await AuthService.login(email, password, role);
+            const { user: loggedUser } = await AuthService.login(email, password, role);
             
             if (loggedUser) {
                 setUser(loggedUser);
@@ -184,7 +178,7 @@ const App: React.FC = () => {
         birthDate: string, 
         address: string, 
         phone: string, 
-        password?: string
+        password: string
     ) => {
         try {
             await AuthService.register({ name, email, cpf, birthDate, address, phone, password });
@@ -241,7 +235,7 @@ const App: React.FC = () => {
         }
     }, [addNotification]);
 
-    // 🔥 Sistema de pedidos
+    // Sistema de pedidos
     const updateOrder = useCallback(async (orderData: Order) => {
         try {
             const updated = await OrderService.updateOrder(orderData);
@@ -265,7 +259,7 @@ const App: React.FC = () => {
         }
     }, [addNotification]);
 
-    // 🔥 Renderização de páginas com Error Boundary individual
+    // Renderização de páginas com Error Boundary individual
     const renderPage = () => {
         const isProtectedRoute = page === Page.Dashboard || page === Page.Order || page === Page.OrderDetail;
         
@@ -277,10 +271,6 @@ const App: React.FC = () => {
         const renderWithErrorBoundary = (component: React.ReactNode, pageName: string) => (
             <ErrorBoundary 
                 fallback={<ErrorFallback onReset={() => window.location.reload()} />}
-                onError={(error, errorInfo) => {
-                    console.error(`Error in ${pageName}:`, error, errorInfo);
-                    addNotification(`Erro ao carregar ${pageName}.`, 'error');
-                }}
             >
                 {component}
             </ErrorBoundary>
@@ -325,14 +315,14 @@ const App: React.FC = () => {
         }
     };
 
-    // 🔥 Loading global durante inicialização
+    // Loading global durante inicialização
     if (isAuthLoading) {
         return <GlobalLoading />;
     }
 
-    // 🔥 Renderização principal com Error Boundary global
+    // Renderização principal com Error Boundary global
     return (
-        <ErrorBoundary onError={handleGlobalError}>
+        <ErrorBoundary>
             <AuthContext.Provider value={{ 
                 user, 
                 login, 
