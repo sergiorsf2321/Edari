@@ -39,13 +39,12 @@ export enum ServiceId {
 }
 
 export interface Service {
-  id: ServiceId | string;
+  id: ServiceId;
   name: string;
-  description?: string;
+  description: string;
   price: number | null;
-  duration?: string;
-  features?: string[];
-  basePrice?: number | null;
+  duration: string;
+  features: string[];
 }
 
 export enum OrderStatus {
@@ -61,15 +60,14 @@ export interface UploadedFile {
   size: number;
   type: string;
   fileRef?: File;
-  s3Key?: string;
 }
 
 export interface Message {
-  id: string;
-  sender: User;
-  content: string;
-  createdAt: Date;
-  attachment?: UploadedFile;
+    id: string;
+    sender: User;
+    content: string;
+    createdAt: Date;
+    attachment?: UploadedFile;
 }
 
 export interface Order {
@@ -78,8 +76,8 @@ export interface Order {
   service: Service;
   analyst?: User;
   status: OrderStatus;
-  isUrgent?: boolean;
-  propertyType?: string;
+  isUrgent: boolean;
+  propertyType: string;
   documents: UploadedFile[];
   total: number;
   createdAt: Date;
@@ -88,19 +86,18 @@ export interface Order {
   report?: UploadedFile;
   description: string;
   messages: Message[];
-  details?: Record<string, any>;
 }
 
 export interface CardDetails {
-  number: string;
-  name: string;
-  expiry: string;
-  cvc: string;
+    number: string;
+    name: string;
+    expiry: string;
+    cvc: string;
 }
 
 export interface PixResponse {
-  qrCodeUrl: string;
-  pixCopyPaste: string;
+    qrCodeUrl: string;
+    pixCopyPaste: string;
 }
 
 export interface Notification {
@@ -111,8 +108,10 @@ export interface Notification {
 
 export interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  registerUser: (name: string, email: string, password: string, cpf: string, birthDate: string, address: string, phone: string) => Promise<void>;
+  // CORREÇÃO: Adicionado password opcional aqui
+  login: (email: string, role: Role, password?: string) => Promise<boolean>;
+  // CORREÇÃO: Adicionado password opcional aqui também
+  registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string, password?: string) => Promise<void>;
   verifyUser: (email: string) => void;
   logout: () => Promise<void>;
   page: Page;
@@ -122,7 +121,7 @@ export interface AuthContextType {
   selectedOrder: Order | null;
   setSelectedOrder: (order: Order | null) => void;
   updateOrder: (updatedOrder: Order) => void;
-  addOrder: (newOrderData: Omit<Order, 'id'>) => Promise<Order | void>;
+  addOrder: (newOrderData: Omit<Order, 'id'>) => void;
   lastRegisteredEmail: string | null;
   addNotification: (message: string, type: 'success' | 'error' | 'info') => void;
   updateUserProfile: (data: Partial<User>) => void;

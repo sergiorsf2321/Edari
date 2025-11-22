@@ -17,17 +17,14 @@ import OrderDetailPage from './pages/OrderDetailPage';
 import EmailConfirmationPage from './pages/EmailConfirmationPage';
 import NotificationContainer from './components/NotificationContainer';
 
-// Ajuste de tipagem para incluir senha no register/login
-interface ExtendedAuthContextType extends AuthContextType {
-    login: (email: string, role: Role, password?: string) => Promise<boolean>;
-    registerUser: (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string, password?: string) => Promise<void>;
-}
-
-const AuthContext = createContext<ExtendedAuthContextType | null>(null);
+// CORREÇÃO: Removemos a interface ExtendedAuthContextType e usamos a padrão
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
     const context = useContext(AuthContext);
-    if (!context) throw new Error('useAuth must be used within an AuthProvider');
+    if (!context) {
+        throw new Error('useAuth must be used within an AuthProvider');
+    }
     return context;
 };
 
@@ -40,9 +37,9 @@ const App: React.FC = () => {
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
 
-    // Carregar usuário (Persistência)
     useEffect(() => {
         const initAuth = async () => {
+            setIsAuthLoading(true);
             try {
                 const currentUser = await AuthService.getCurrentUser();
                 if (currentUser) {
@@ -50,7 +47,7 @@ const App: React.FC = () => {
                     if (page === Page.Landing) setPage(Page.Dashboard);
                 }
             } catch (error) {
-                console.log("Sessão inválida.");
+                console.log("Sessão expirada ou inválida.");
             } finally {
                 setIsAuthLoading(false);
             }
@@ -58,21 +55,28 @@ const App: React.FC = () => {
         initAuth();
     }, []);
 
-    // Carregar pedidos
     useEffect(() => {
         if (user) {
-            OrderService.getOrders().then(setOrders).catch(console.error);
+            OrderService.getOrders()
+                .then(setOrders)
+                .catch(err => console.error("Erro ao carregar pedidos:", err));
         } else {
             setOrders([]);
         }
     }, [user]);
 
+    useEffect(() => {
+        window.scrollTo(0, 0);
+    }, [page]);
+    
     const addNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
         const id = Date.now();
         setNotifications(prev => [...prev, { id, message, type }]);
-        setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 5000);
+        setTimeout(() => {
+            setNotifications(prev => prev.filter(n => n.id !== id));
+        }, 5000);
     }, []);
-
+    
     const removeNotification = useCallback((id: number) => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     }, []);
@@ -98,7 +102,7 @@ const App: React.FC = () => {
             await AuthService.register({ name, email, cpf, birthDate, address, phone, password });
             setLastRegisteredEmail(email);
             setPage(Page.Login);
-            addNotification('Cadastro realizado com sucesso!', 'success');
+            addNotification('Cadastro realizado com sucesso! Faça login.', 'success');
         } catch (error: any) {
              addNotification(error.message || 'Erro ao cadastrar', 'error');
         }
@@ -106,30 +110,69 @@ const App: React.FC = () => {
 
     const verifyUser = useCallback(async (email: string) => {
         await AuthService.verifyEmail(email);
-        addNotification('E-mail confirmado!', 'success');
+        addNotification('E-mail confirmado com sucesso!', 'success');
     }, [addNotification]);
     
+    const updateUserProfile = useCallback(async (data: Partial<User>) => {
+        if (user) {
+            try {
+                const updatedUser = await AuthService.updateProfile(user.id, data);
+                setUser(updatedUser);
+            } catch (error) {
+                addNotification("Erro ao atualizar perfil", "error");
+            }
+        }
+    }, [user, addNotification]);
+
     const logout = useCallback(async () => {
         localStorage.removeItem('edari_token');
         localStorage.removeItem('edari_user_id');
         setUser(null);
+        setOrders([]); 
         setPage(Page.Landing);
-        addNotification("Você saiu.", 'info');
+        setSelectedOrder(null);
+        addNotification("Você saiu com segurança.", 'info');
     }, [addNotification]);
-    
-    // ... Resto das funções (loginWithGoogle, updateOrder, etc.) permanecem iguais ...
-    // Mantive apenas o essencial alterado para brevidade. Copie o resto do arquivo original se necessário,
-    // mas certifique-se de usar o AuthContext.Provider com os novos valores abaixo.
 
-    const loginWithGoogle = useCallback(async (token: string) => { /* ... */ }, []);
-    const updateOrder = useCallback(async (o: Order) => { /* ... */ }, []);
-    const addOrder = useCallback(async (o: any) => { /* ... */ }, []);
-    const updateUserProfile = useCallback(async (d: any) => { /* ... */ }, []);
+    const loginWithGoogle = useCallback(async (googleToken: string) => {
+        try {
+            const loggedUser = await AuthService.socialLogin('google', googleToken);
+            setUser(loggedUser);
+            setPage(Page.Dashboard);
+            addNotification(`Login com Google sucesso!`, 'success');
+        } catch (error) {
+            addNotification("Login com Google falhou.", 'error');
+        }
+    }, [addNotification]);
 
-    if (isAuthLoading) return <div className="flex justify-center items-center h-screen">Carregando...</div>;
+    const updateOrder = useCallback(async (orderData: Order) => {
+        try {
+            const updated = await OrderService.updateOrder(orderData);
+            setOrders(prevOrders => prevOrders.map(o => o.id === updated.id ? updated : o));
+            if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
+        } catch (e) {
+            console.error(e);
+        }
+    }, [selectedOrder]);
+
+    const addOrder = useCallback(async (newOrderData: Omit<Order, 'id'>) => {
+        try {
+            const createdOrder = await OrderService.createOrder(newOrderData);
+            setOrders(prevOrders => [createdOrder, ...prevOrders]);
+        } catch (e) {
+            console.error(e);
+        }
+    }, []);
+
+    if (isAuthLoading) {
+        return <div className="flex justify-center items-center h-screen">Carregando...</div>;
+    }
 
     const renderPage = () => {
-        if ((page === Page.Dashboard || page === Page.Order || page === Page.OrderDetail) && !user) return <LoginPage />;
+        const isProtectedRoute = page === Page.Dashboard || page === Page.Order || page === Page.OrderDetail;
+        if (isProtectedRoute && !user) {
+            return <LoginPage />;
+        }
         
         switch (page) {
             case Page.Landing: return <LandingPage />;
@@ -140,10 +183,14 @@ const App: React.FC = () => {
             case Page.Order: return <OrderFlow />;
             case Page.OrderDetail: return <OrderDetailPage />;
             case Page.Dashboard:
-                return user!.role === Role.Admin ? <AdminDashboard /> : 
-                       user!.role === Role.Analyst ? <AnalystDashboard /> : 
-                       <ClientDashboard />;
-            default: return <LandingPage />;
+                switch (user!.role) {
+                    case Role.Admin: return <AdminDashboard />;
+                    case Role.Analyst: return <AnalystDashboard />;
+                    case Role.Client: return <ClientDashboard />;
+                }
+                break;
+            default:
+                return <LandingPage />;
         }
     };
 
@@ -152,7 +199,9 @@ const App: React.FC = () => {
             <div className="bg-brand-light min-h-screen flex flex-col font-sans text-slate-800">
                 <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
                 <Header />
-                <main className="flex-grow">{renderPage()}</main>
+                <main className="flex-grow">
+                    {renderPage()}
+                </main>
                 <Footer />
             </div>
         </AuthContext.Provider>
