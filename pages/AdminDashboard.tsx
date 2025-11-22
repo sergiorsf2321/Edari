@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../App';
-import { AuthService } from '../services/authService'; // Importar AuthService
+import { AuthService } from '../services/authService'; 
 import { Order, OrderStatus, Role, Page, User } from '../types';
 import { 
     BarChart, 
@@ -16,34 +16,32 @@ import {
     Cell
 } from 'recharts';
 import StatusBadge from '../components/StatusBadge';
-import LoadingSpinner from '../components/LoadingSpinner';
 
 const AdminDashboard: React.FC = () => {
     const { orders, updateOrder, setPage, setSelectedOrder, addNotification } = useAuth();
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // --- MUDANÇA: Estado para analistas reais da API ---
+    // --- NOVA LÓGICA: Analistas vindos da API (Banco de Dados) ---
     const [analysts, setAnalysts] = useState<User[]>([]);
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
-    // Buscar analistas ao carregar a página
     useEffect(() => {
         const fetchAnalysts = async () => {
             setIsLoadingAnalysts(true);
             try {
+                // Busca apenas usuários com cargo de Analista
                 const data = await AuthService.getUsersByRole(Role.Analyst);
                 setAnalysts(data);
             } catch (error) {
                 console.error("Erro ao buscar analistas", error);
-                addNotification("Não foi possível carregar a lista de analistas.", "error");
             } finally {
                 setIsLoadingAnalysts(false);
             }
         };
         fetchAnalysts();
-    }, [addNotification]);
-    // ---------------------------------------------------
+    }, []);
+    // -------------------------------------------------------------
 
     const filteredOrders = useMemo(() => {
         let tempOrders = orders;
@@ -124,7 +122,7 @@ const AdminDashboard: React.FC = () => {
 
     const serviceChartData = useMemo(() => {
         const serviceCounts = orders.reduce((acc, order) => {
-            const name = order.service.name.split(' ')[0]; // Use first word for brevity
+            const name = order.service.name.split(' ')[0]; 
             acc[name] = (acc[name] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
@@ -142,7 +140,6 @@ const AdminDashboard: React.FC = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-bold text-brand-primary mb-8">Painel Administrativo</h1>
                 
-                {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Total</h3><p className="text-3xl font-bold">{stats.total}</p></div>
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Aguard. Orçamento</h3><p className="text-3xl font-bold text-purple-500">{stats.awaitingQuote}</p></div>
@@ -151,7 +148,6 @@ const AdminDashboard: React.FC = () => {
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Concluídos</h3><p className="text-3xl font-bold text-green-500">{stats.completed}</p></div>
                 </div>
 
-                {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Distribuição por Status</h3>
@@ -187,13 +183,12 @@ const AdminDashboard: React.FC = () => {
                                 <YAxis allowDecimals={false} width={40}/>
                                 <Tooltip />
                                 <Legend wrapperStyle={{fontSize: '14px'}}/>
-                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} /> {/* brand-primary */}
+                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} /> 
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Financial Stats */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Balanço do Mês (Concluídos)</h3>
@@ -219,7 +214,6 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
 
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200">

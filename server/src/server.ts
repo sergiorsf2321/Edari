@@ -159,6 +159,33 @@ app.get('/api/users', authenticate, async (req, res) => {
     }
 });
 
+// server/src/server.ts
+
+// ... (após /api/auth/me)
+
+app.get('/api/users', authenticate, async (req, res) => {
+    const authReq = req as AuthRequest;
+    const { role } = req.query;
+
+    try {
+        // Verifica se é ADMIN
+        if (authReq.user.role !== 'ADMIN') {
+             return res.status(403).json({ message: 'Acesso negado.' });
+        }
+
+        const where: any = {};
+        if (role) where.role = role;
+
+        const users = await prisma.user.findMany({
+            where,
+            select: { id: true, name: true, email: true, role: true } 
+        });
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar usuários' });
+    }
+});
+
 // ... (resto do arquivo: profile, orders, etc.)
 
 // Auth: Update Profile
