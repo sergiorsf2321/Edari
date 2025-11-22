@@ -32,8 +32,13 @@ export const AuthService = {
   },
   
   socialLogin: async (provider: 'google' | 'apple', token: string): Promise<User> => {
-      // Requer implementação no backend
-      throw new Error("Login social requer configuração de backend.");
+      const response = await apiRequest<{ token: string, user: User }>('/auth/social', {
+          method: 'POST',
+          body: JSON.stringify({ provider, token })
+      });
+      localStorage.setItem('edari_token', response.token);
+      localStorage.setItem('edari_user_id', response.user.id);
+      return response.user;
   },
   
   updateProfile: async (userId: string, data: Partial<User>): Promise<User> => {

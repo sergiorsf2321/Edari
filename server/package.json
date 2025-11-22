@@ -1,14 +1,12 @@
+
 {
   "name": "edari-backend",
   "version": "1.0.0",
-  "description": "API Backend para Edari",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "prisma:generate": "prisma generate",
-    "prisma:push": "prisma db push",
     "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {

@@ -26,7 +26,7 @@ export interface User {
   cpf?: string;
   birthDate?: string;
   address?: string;
-  phone?: string; // Novo campo para WhatsApp
+  phone?: string;
 }
 
 export enum ServiceId {
@@ -60,6 +60,7 @@ export interface UploadedFile {
   name: string;
   size: number;
   type: string;
+  fileRef?: File; // Campo essencial para enviar o binário para o backend
 }
 
 export interface Message {
