@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useAuth } from '../App';
 import { Page } from '../types';
@@ -39,7 +40,7 @@ const EmailConfirmationPage: React.FC = () => {
                             onClick={handleConfirm}
                             className="w-full bg-brand-accent text-white font-bold py-3 rounded-lg hover:opacity-90 transition-opacity"
                         >
-                            (Simulação) Confirmar E-mail e ir para Login
+                            Ir para Login
                         </button>
                     </div>
 
