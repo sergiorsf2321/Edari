@@ -22,11 +22,10 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // Inicialização segura com tipagem explícita
-    const [analysts, setAnalysts] = useState<User[]>([]);
+    // CORREÇÃO: Uso de Generics <User[]> para garantir a tipagem correta
+    const [analysts, setAnalysts] = useState<User[]>([]); 
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
-    // Busca analistas reais da API
     useEffect(() => {
         const fetchAnalysts = async () => {
             setIsLoadingAnalysts(true);
@@ -37,7 +36,7 @@ const AdminDashboard: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Erro ao buscar analistas", error);
-                addNotification("Erro ao carregar lista de analistas.", "error");
+                addNotification("Não foi possível carregar a lista de analistas.", "error");
             } finally {
                 setIsLoadingAnalysts(false);
             }
@@ -62,7 +61,7 @@ const AdminDashboard: React.FC = () => {
     }, [orders, filterStatus, searchTerm]);
 
     const assignAnalyst = (orderId: string, analystId: string) => {
-        const analyst = analysts.find((a: User) => a.id === analystId);
+        const analyst = analysts.find((a) => a.id === analystId);
         if (!analyst) return;
         
         const orderToUpdate = orders.find(o => o.id === orderId);
@@ -135,14 +134,13 @@ const AdminDashboard: React.FC = () => {
         }));
     }, [orders]);
 
-    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e'];
+    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e']; 
 
     return (
         <div className="bg-slate-50 py-12">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-bold text-brand-primary mb-8">Painel Administrativo</h1>
                 
-                {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Total</h3><p className="text-3xl font-bold">{stats.total}</p></div>
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Aguard. Orçamento</h3><p className="text-3xl font-bold text-purple-500">{stats.awaitingQuote}</p></div>
@@ -151,7 +149,6 @@ const AdminDashboard: React.FC = () => {
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Concluídos</h3><p className="text-3xl font-bold text-green-500">{stats.completed}</p></div>
                 </div>
 
-                {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Distribuição por Status</h3>
@@ -187,13 +184,12 @@ const AdminDashboard: React.FC = () => {
                                 <YAxis allowDecimals={false} width={40}/>
                                 <Tooltip />
                                 <Legend wrapperStyle={{fontSize: '14px'}}/>
-                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} /> 
+                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
-                {/* Financial Stats */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Balanço do Mês (Concluídos)</h3>
@@ -279,8 +275,7 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {/* Mapeamento seguro com cast explícito */}
-                                                                {(analysts as User[]).map((a: User) => (
+                                                                {analysts.map((a) => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
                                                             </select>
@@ -297,7 +292,7 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {(analysts as User[]).map((a: User) => (
+                                                                {analysts.map((a) => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
                                                             </select>
