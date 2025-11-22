@@ -1,4 +1,4 @@
-import { User, Role } from "../types";
+import { User, Role } from "./types";
 import { apiRequest } from "./api";
 
 export const AuthService = {
