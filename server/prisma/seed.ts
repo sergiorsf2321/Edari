@@ -24,7 +24,7 @@ async function main() {
     });
   }
 
-  const passwordHash = await bcrypt.hash('admin123', 10);
+  const passwordHash = await bcrypt.hash('$ergi0F1lh0..J0yC3', 10);
   
   // Criação do Admin
   await prisma.user.upsert({
@@ -34,7 +34,7 @@ async function main() {
       email: 'edari.docs@gmail.com',
       name: 'Super Admin',
       role: 'ADMIN',
-      passwordHash: "$ergi0F1lh0..J0yC3",
+      passwordHash,
       isVerified: true,
       phone: '85996231572',
       cpf: '068.263.473-50',
