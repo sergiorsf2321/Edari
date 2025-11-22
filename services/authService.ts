@@ -50,6 +50,13 @@ export const AuthService = {
     }
   },
 
+  verifyEmail: async (email: string): Promise<void> => {
+    await apiRequest('/auth/verify-email', { 
+      method: 'POST', 
+      body: JSON.stringify({ email }) 
+    });
+  },
+
   getCurrentUser: async (): Promise<User | null> => {
     const token = localStorage.getItem('edari_token');
     if (!token) return null;
@@ -58,14 +65,24 @@ export const AuthService = {
       const response = await apiRequest<{ data: User }>('/auth/me');
       return response.data;
     } catch (error) {
-      // Token inválido - limpar storage
       localStorage.removeItem('edari_token');
       localStorage.removeItem('edari_user_id');
       localStorage.removeItem('edari_user_role');
       return null;
     }
   },
-
+  
+  socialLogin: async (provider: 'google' | 'apple', token: string): Promise<User> => {
+    const response = await apiRequest<{ data: { token: string, user: User } }>('/auth/social', {
+      method: 'POST',
+      body: JSON.stringify({ provider, token })
+    });
+    localStorage.setItem('edari_token', response.data.token);
+    localStorage.setItem('edari_user_id', response.data.user.id);
+    localStorage.setItem('edari_user_role', response.data.user.role);
+    return response.data.user;
+  },
+  
   updateProfile: async (userId: string, data: Partial<User>): Promise<User> => {
     const response = await apiRequest<{ data: User }>('/auth/profile', {
       method: 'PATCH',
