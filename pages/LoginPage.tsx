@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../App';
 import { Page, Role } from '../types';
@@ -11,7 +10,7 @@ declare global {
 
 // IMPORTANTE: Substitua este valor pela chave que você gerou no painel
 // do Google Cloud Console.
-const GOOGLE_CLIENT_ID = "SEU_GOOGLE_CLIENT_ID_AQUI.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = "785859505068-58mvj4v197pk9fh5rrfrn83fadhov8ch.apps.googleusercontent.com";
 
 const LoginPage: React.FC = () => {
     const { login, loginWithGoogle, setPage, addNotification } = useAuth();
@@ -25,14 +24,27 @@ const LoginPage: React.FC = () => {
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        await login(email, Role.Client);
-        setIsLoading(false);
+        try {
+            const success = await login(email, password); // Passando a senha real!
+            if (!success) {
+                addNotification('Falha no login. Verifique suas credenciais.', 'error');
+            }
+        } catch (error: any) {
+            addNotification(error.message || 'Falha no login', 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleGoogleSignIn = async (response: any) => {
         setIsSocialLoading(true);
-        await loginWithGoogle(response.credential);
-        setIsSocialLoading(false);
+        try {
+            await loginWithGoogle(response.credential);
+        } catch (error) {
+            addNotification('Login com Google falhou.', 'error');
+        } finally {
+            setIsSocialLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -53,7 +65,6 @@ const LoginPage: React.FC = () => {
                         );
                     }
                 } catch (error) {
-                    // Em ambientes de sandbox ou iframes restritos, o Google Auth pode falhar.
                     console.warn("Google Sign-In falhou ao inicializar:", error);
                 }
             }
@@ -73,11 +84,28 @@ const LoginPage: React.FC = () => {
                     <form onSubmit={handleEmailLogin} className="space-y-4">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium mb-1 text-slate-700">Email</label>
-                            <input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" required disabled={isLoading || isSocialLoading} />
+                            <input 
+                                id="email" 
+                                type="email" 
+                                value={email} 
+                                onChange={e => setEmail(e.target.value)} 
+                                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" 
+                                required 
+                                disabled={isLoading || isSocialLoading} 
+                            />
                         </div>
                         <div>
-                            <label htmlFor="password"className="block text-sm font-medium mb-1 text-slate-700">Senha</label>
-                            <input id="password" type="password" value={password} onChange={e => setPassword(e.target.value)} className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" placeholder="Qualquer senha funciona" required disabled={isLoading || isSocialLoading} />
+                            <label htmlFor="password" className="block text-sm font-medium mb-1 text-slate-700">Senha</label>
+                            <input 
+                                id="password" 
+                                type="password" 
+                                value={password} 
+                                onChange={e => setPassword(e.target.value)} 
+                                className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-brand-secondary focus:border-brand-secondary bg-white text-slate-900" 
+                                required 
+                                disabled={isLoading || isSocialLoading}
+                                minLength={6}
+                            />
                         </div>
                         
                         <button 
