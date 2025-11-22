@@ -16,8 +16,10 @@ import StaffLoginPage from './pages/StaffLoginPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import EmailConfirmationPage from './pages/EmailConfirmationPage';
 import NotificationContainer from './components/NotificationContainer';
+import ErrorBoundary from './components/ErrorBoundary';
+import LoadingSpinner from './components/LoadingSpinner';
 
-// CORREÇÃO: Removemos a interface ExtendedAuthContextType e usamos a padrão
+// Context de Autenticação
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const useAuth = () => {
@@ -28,6 +30,45 @@ export const useAuth = () => {
     return context;
 };
 
+// Componente de Loading Global
+const GlobalLoading: React.FC = () => (
+  <div className="fixed inset-0 bg-white bg-opacity-80 flex items-center justify-center z-50">
+    <div className="text-center">
+      <LoadingSpinner size="lg" color="text-brand-primary" />
+      <p className="mt-4 text-slate-600 font-medium">Carregando EDARI...</p>
+    </div>
+  </div>
+);
+
+// Fallback personalizado para erros em rotas específicas
+const ErrorFallback: React.FC<{ onReset?: () => void }> = ({ onReset }) => (
+  <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="text-center p-8">
+      <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+        <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.35 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </div>
+      <h2 className="text-xl font-bold text-slate-800 mb-2">Erro ao carregar página</h2>
+      <p className="text-slate-600 mb-4">Tente recarregar a página ou voltar para o início.</p>
+      <div className="flex gap-3 justify-center">
+        <button
+          onClick={onReset}
+          className="bg-brand-primary text-white px-4 py-2 rounded-lg hover:bg-brand-secondary"
+        >
+          Tentar Novamente
+        </button>
+        <button
+          onClick={() => window.location.href = '/'}
+          className="border border-slate-300 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-50"
+        >
+          Página Inicial
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 const App: React.FC = () => {
     const [user, setUser] = useState<User | null>(null);
     const [page, setPage] = useState<Page>(Page.Landing);
@@ -36,7 +77,20 @@ const App: React.FC = () => {
     const [lastRegisteredEmail, setLastRegisteredEmail] = useState<string | null>(null);
     const [notifications, setNotifications] = useState<Notification[]>([]);
     const [isAuthLoading, setIsAuthLoading] = useState(true);
+    const [globalError, setGlobalError] = useState<string | null>(null);
 
+    // 🔥 Handler global de erros
+    const handleGlobalError = useCallback((error: Error, errorInfo: React.ErrorInfo) => {
+        console.error('Global Error Captured:', error, errorInfo);
+        setGlobalError(error.message);
+        
+        // Enviar para serviço de monitoramento em produção
+        if (process.env.NODE_ENV === 'production') {
+          // fetch('/api/error-logging', { method: 'POST', body: JSON.stringify({ error, errorInfo }) })
+        }
+    }, []);
+
+    // 🔥 Inicialização segura da aplicação
     useEffect(() => {
         const initAuth = async () => {
             setIsAuthLoading(true);
@@ -44,34 +98,57 @@ const App: React.FC = () => {
                 const currentUser = await AuthService.getCurrentUser();
                 if (currentUser) {
                     setUser(currentUser);
-                    if (page === Page.Landing) setPage(Page.Dashboard);
+                    
+                    // Carregar pedidos em background sem bloquear a UI
+                    OrderService.getOrders()
+                        .then(setOrders)
+                        .catch(err => {
+                            console.error("Erro ao carregar pedidos:", err);
+                            addNotification('Erro ao carregar pedidos. Tente recarregar a página.', 'error');
+                        });
+                    
+                    if (page === Page.Landing) {
+                        setPage(Page.Dashboard);
+                    }
                 }
-            } catch (error) {
+            } catch (error: any) {
                 console.log("Sessão expirada ou inválida.");
+                // Não mostrar erro para sessões expiradas - é comportamento normal
             } finally {
                 setIsAuthLoading(false);
             }
         };
+
         initAuth();
     }, []);
 
+    // 🔥 Carregar pedidos quando usuário mudar
     useEffect(() => {
         if (user) {
             OrderService.getOrders()
                 .then(setOrders)
-                .catch(err => console.error("Erro ao carregar pedidos:", err));
+                .catch(err => {
+                    console.error("Erro ao carregar pedidos:", err);
+                    addNotification('Erro ao carregar seus pedidos.', 'error');
+                });
         } else {
             setOrders([]);
         }
     }, [user]);
 
+    // 🔥 Scroll para topo ao mudar de página
     useEffect(() => {
         window.scrollTo(0, 0);
     }, [page]);
-    
+
+    // 🔥 Sistema de notificações
     const addNotification = useCallback((message: string, type: 'success' | 'error' | 'info' = 'info') => {
-        const id = Date.now();
-        setNotifications(prev => [...prev, { id, message, type }]);
+        const id = Date.now() + Math.random();
+        const notification: Notification = { id, message, type };
+        
+        setNotifications(prev => [...prev, notification]);
+        
+        // Auto-remover após 5 segundos
         setTimeout(() => {
             setNotifications(prev => prev.filter(n => n.id !== id));
         }, 5000);
@@ -81,9 +158,11 @@ const App: React.FC = () => {
         setNotifications(prev => prev.filter(n => n.id !== id));
     }, []);
 
-    const login = useCallback(async (email: string, role: Role, password?: string): Promise<boolean> => {
+    // 🔥 Sistema de autenticação
+    const login = useCallback(async (email: string, password: string, role?: Role): Promise<boolean> => {
         try {
-            const loggedUser = await AuthService.login(email, role, password);
+            const { user: loggedUser, token } = await AuthService.login(email, password, role);
+            
             if (loggedUser) {
                 setUser(loggedUser);
                 setPage(Page.Dashboard);
@@ -92,25 +171,38 @@ const App: React.FC = () => {
             }
             return false;
         } catch (error: any) {
-            addNotification(error.message || 'Falha no login', 'error');
+            const message = error.message || 'Falha no login. Verifique suas credenciais.';
+            addNotification(message, 'error');
             return false;
         }
     }, [addNotification]);
     
-    const registerUser = useCallback(async (name: string, email: string, cpf: string, birthDate: string, address: string, phone: string, password?: string) => {
+    const registerUser = useCallback(async (
+        name: string, 
+        email: string, 
+        cpf: string, 
+        birthDate: string, 
+        address: string, 
+        phone: string, 
+        password?: string
+    ) => {
         try {
             await AuthService.register({ name, email, cpf, birthDate, address, phone, password });
             setLastRegisteredEmail(email);
             setPage(Page.Login);
             addNotification('Cadastro realizado com sucesso! Faça login.', 'success');
         } catch (error: any) {
-             addNotification(error.message || 'Erro ao cadastrar', 'error');
+             addNotification(error.message || 'Erro ao cadastrar. Tente novamente.', 'error');
         }
     }, [addNotification]);
 
     const verifyUser = useCallback(async (email: string) => {
-        await AuthService.verifyEmail(email);
-        addNotification('E-mail confirmado com sucesso!', 'success');
+        try {
+            await AuthService.verifyEmail(email);
+            addNotification('E-mail confirmado com sucesso!', 'success');
+        } catch (error: any) {
+            addNotification(error.message || 'Erro ao confirmar e-mail.', 'error');
+        }
     }, [addNotification]);
     
     const updateUserProfile = useCallback(async (data: Partial<User>) => {
@@ -118,20 +210,24 @@ const App: React.FC = () => {
             try {
                 const updatedUser = await AuthService.updateProfile(user.id, data);
                 setUser(updatedUser);
-            } catch (error) {
-                addNotification("Erro ao atualizar perfil", "error");
+                addNotification('Perfil atualizado com sucesso!', 'success');
+            } catch (error: any) {
+                addNotification(error.message || "Erro ao atualizar perfil", "error");
             }
         }
     }, [user, addNotification]);
 
     const logout = useCallback(async () => {
-        localStorage.removeItem('edari_token');
-        localStorage.removeItem('edari_user_id');
-        setUser(null);
-        setOrders([]); 
-        setPage(Page.Landing);
-        setSelectedOrder(null);
-        addNotification("Você saiu com segurança.", 'info');
+        try {
+            AuthService.logout();
+            setUser(null);
+            setOrders([]); 
+            setPage(Page.Landing);
+            setSelectedOrder(null);
+            addNotification("Você saiu com segurança.", 'info');
+        } catch (error) {
+            addNotification("Erro ao fazer logout.", 'error');
+        }
     }, [addNotification]);
 
     const loginWithGoogle = useCallback(async (googleToken: string) => {
@@ -139,72 +235,174 @@ const App: React.FC = () => {
             const loggedUser = await AuthService.socialLogin('google', googleToken);
             setUser(loggedUser);
             setPage(Page.Dashboard);
-            addNotification(`Login com Google sucesso!`, 'success');
-        } catch (error) {
-            addNotification("Login com Google falhou.", 'error');
+            addNotification(`Login com Google realizado com sucesso!`, 'success');
+        } catch (error: any) {
+            addNotification(error.message || "Login com Google falhou.", 'error');
         }
     }, [addNotification]);
 
+    // 🔥 Sistema de pedidos
     const updateOrder = useCallback(async (orderData: Order) => {
         try {
             const updated = await OrderService.updateOrder(orderData);
             setOrders(prevOrders => prevOrders.map(o => o.id === updated.id ? updated : o));
-            if (selectedOrder?.id === updated.id) setSelectedOrder(updated);
-        } catch (e) {
-            console.error(e);
+            if (selectedOrder?.id === updated.id) {
+                setSelectedOrder(updated);
+            }
+        } catch (error: any) {
+            console.error("Erro ao atualizar pedido:", error);
+            addNotification(error.message || "Erro ao atualizar pedido.", "error");
         }
-    }, [selectedOrder]);
+    }, [selectedOrder, addNotification]);
 
     const addOrder = useCallback(async (newOrderData: Omit<Order, 'id'>) => {
         try {
             const createdOrder = await OrderService.createOrder(newOrderData);
             setOrders(prevOrders => [createdOrder, ...prevOrders]);
-        } catch (e) {
-            console.error(e);
+        } catch (error: any) {
+            console.error("Erro ao criar pedido:", error);
+            addNotification(error.message || "Erro ao criar pedido.", "error");
         }
-    }, []);
+    }, [addNotification]);
 
-    if (isAuthLoading) {
-        return <div className="flex justify-center items-center h-screen">Carregando...</div>;
-    }
-
+    // 🔥 Renderização de páginas com Error Boundary individual
     const renderPage = () => {
         const isProtectedRoute = page === Page.Dashboard || page === Page.Order || page === Page.OrderDetail;
+        
         if (isProtectedRoute && !user) {
             return <LoginPage />;
         }
         
+        // Error Boundary individual para cada página
+        const renderWithErrorBoundary = (component: React.ReactNode, pageName: string) => (
+            <ErrorBoundary 
+                fallback={<ErrorFallback onReset={() => window.location.reload()} />}
+                onError={(error, errorInfo) => {
+                    console.error(`Error in ${pageName}:`, error, errorInfo);
+                    addNotification(`Erro ao carregar ${pageName}.`, 'error');
+                }}
+            >
+                {component}
+            </ErrorBoundary>
+        );
+
         switch (page) {
-            case Page.Landing: return <LandingPage />;
-            case Page.Login: return <LoginPage />;
-            case Page.StaffLogin: return <StaffLoginPage />;
-            case Page.Signup: return <SignupPage />;
-            case Page.EmailConfirmation: return <EmailConfirmationPage />;
-            case Page.Order: return <OrderFlow />;
-            case Page.OrderDetail: return <OrderDetailPage />;
+            case Page.Landing: 
+                return renderWithErrorBoundary(<LandingPage />, 'Página Inicial');
+            
+            case Page.Login: 
+                return renderWithErrorBoundary(<LoginPage />, 'Login');
+            
+            case Page.StaffLogin: 
+                return renderWithErrorBoundary(<StaffLoginPage />, 'Login de Staff');
+            
+            case Page.Signup: 
+                return renderWithErrorBoundary(<SignupPage />, 'Cadastro');
+            
+            case Page.EmailConfirmation: 
+                return renderWithErrorBoundary(<EmailConfirmationPage />, 'Confirmação de Email');
+            
+            case Page.Order: 
+                return renderWithErrorBoundary(<OrderFlow />, 'Novo Pedido');
+            
+            case Page.OrderDetail: 
+                return renderWithErrorBoundary(<OrderDetailPage />, 'Detalhes do Pedido');
+            
             case Page.Dashboard:
                 switch (user!.role) {
-                    case Role.Admin: return <AdminDashboard />;
-                    case Role.Analyst: return <AnalystDashboard />;
-                    case Role.Client: return <ClientDashboard />;
+                    case Role.Admin: 
+                        return renderWithErrorBoundary(<AdminDashboard />, 'Painel Admin');
+                    case Role.Analyst: 
+                        return renderWithErrorBoundary(<AnalystDashboard />, 'Painel Analista');
+                    case Role.Client: 
+                        return renderWithErrorBoundary(<ClientDashboard />, 'Painel Cliente');
+                    default:
+                        return renderWithErrorBoundary(<LandingPage />, 'Página Inicial');
                 }
-                break;
+            
             default:
-                return <LandingPage />;
+                return renderWithErrorBoundary(<LandingPage />, 'Página Inicial');
         }
     };
 
+    // 🔥 Loading global durante inicialização
+    if (isAuthLoading) {
+        return <GlobalLoading />;
+    }
+
+    // 🔥 Renderização principal com Error Boundary global
     return (
-        <AuthContext.Provider value={{ user, login, registerUser, verifyUser, logout, page, setPage, loginWithGoogle, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder, lastRegisteredEmail, addNotification, updateUserProfile }}>
-            <div className="bg-brand-light min-h-screen flex flex-col font-sans text-slate-800">
-                <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
-                <Header />
-                <main className="flex-grow">
-                    {renderPage()}
-                </main>
-                <Footer />
-            </div>
-        </AuthContext.Provider>
+        <ErrorBoundary onError={handleGlobalError}>
+            <AuthContext.Provider value={{ 
+                user, 
+                login, 
+                registerUser, 
+                verifyUser, 
+                logout, 
+                page, 
+                setPage, 
+                loginWithGoogle, 
+                orders, 
+                selectedOrder, 
+                setSelectedOrder, 
+                updateOrder, 
+                addOrder, 
+                lastRegisteredEmail, 
+                addNotification, 
+                updateUserProfile 
+            }}>
+                <div className="bg-brand-light min-h-screen flex flex-col font-sans text-slate-800">
+                    {/* Sistema de Notificações */}
+                    <NotificationContainer 
+                        notifications={notifications} 
+                        removeNotification={removeNotification} 
+                    />
+                    
+                    {/* Header */}
+                    <ErrorBoundary
+                        fallback={
+                            <div className="bg-red-50 border-b border-red-200 p-4 text-center">
+                                <p className="text-red-700">Erro no cabeçalho. A navegação pode estar limitada.</p>
+                            </div>
+                        }
+                    >
+                        <Header />
+                    </ErrorBoundary>
+                    
+                    {/* Conteúdo Principal */}
+                    <main className="flex-grow">
+                        {renderPage()}
+                    </main>
+                    
+                    {/* Footer */}
+                    <ErrorBoundary
+                        fallback={
+                            <div className="bg-gray-900 text-white p-8 text-center">
+                                <p>© {new Date().getFullYear()} EDARI. Todos os direitos reservados.</p>
+                            </div>
+                        }
+                    >
+                        <Footer />
+                    </ErrorBoundary>
+                </div>
+                
+                {/* Alertas de Erro Global */}
+                {globalError && (
+                    <div className="fixed bottom-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg max-w-sm z-50">
+                        <div className="flex items-center justify-between">
+                            <span className="font-medium">Erro do Sistema</span>
+                            <button 
+                                onClick={() => setGlobalError(null)}
+                                className="text-white hover:text-red-200 ml-4"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <p className="text-sm mt-1">{globalError}</p>
+                    </div>
+                )}
+            </AuthContext.Provider>
+        </ErrorBoundary>
     );
 };
 
