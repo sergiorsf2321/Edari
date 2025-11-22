@@ -1,16 +1,6 @@
-O erro Property 'name' does not exist on type 'never' persiste porque o TypeScript ainda está a inferir que o estado analysts é uma lista vazia sem tipo ([]), provavelmente porque a definição genérica <User[]> se perdeu ou não foi interpretada corretamente no ambiente de build.
-
-Para resolver isto definitivamente, vamos usar uma sintaxe de "Type Assertion" (Forçar Tipo) na inicialização do estado. Isso é "à prova de falhas" para o compilador.
-
-Substitua todo o conteúdo do arquivo pages/AdminDashboard.tsx por este código:
-
-Arquivo: pages/AdminDashboard.tsx
-
-TypeScript
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../App';
-import { AuthService } from '../services/authService'; 
+import { AuthService } from '../services/authService';
 import { Order, OrderStatus, Role, Page, User } from '../types';
 import { 
     BarChart, 
@@ -32,22 +22,22 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // CORREÇÃO FINAL: Usando 'as User[]' para garantir que o TypeScript entenda o tipo
-    const [analysts, setAnalysts] = useState([] as User[]);
+    // Estado tipado corretamente para evitar erros de 'never'
+    const [analysts, setAnalysts] = useState<User[]>([]);
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
+    // Busca analistas reais da API ao carregar
     useEffect(() => {
         const fetchAnalysts = async () => {
             setIsLoadingAnalysts(true);
             try {
                 const data = await AuthService.getUsersByRole(Role.Analyst);
-                // Garante que data é um array antes de setar
                 if (Array.isArray(data)) {
                     setAnalysts(data);
                 }
             } catch (error) {
                 console.error("Erro ao buscar analistas", error);
-                addNotification("Erro ao carregar lista de analistas.", "error");
+                addNotification("Não foi possível carregar a lista de analistas.", "error");
             } finally {
                 setIsLoadingAnalysts(false);
             }
@@ -134,7 +124,7 @@ const AdminDashboard: React.FC = () => {
 
     const serviceChartData = useMemo(() => {
         const serviceCounts = orders.reduce((acc, order) => {
-            const name = order.service.name.split(' ')[0]; // Use first word for brevity
+            const name = order.service.name.split(' ')[0];
             acc[name] = (acc[name] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
@@ -145,7 +135,7 @@ const AdminDashboard: React.FC = () => {
         }));
     }, [orders]);
 
-    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e']; // Purple, Amber, Blue, Green
+    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e']; 
 
     return (
         <div className="bg-slate-50 py-12">
@@ -197,7 +187,7 @@ const AdminDashboard: React.FC = () => {
                                 <YAxis allowDecimals={false} width={40}/>
                                 <Tooltip />
                                 <Legend wrapperStyle={{fontSize: '14px'}}/>
-                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} /> {/* brand-primary */}
+                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -229,7 +219,6 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
 
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200">
