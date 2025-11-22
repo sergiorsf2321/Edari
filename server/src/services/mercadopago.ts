@@ -1,6 +1,6 @@
 import { MercadoPagoConfig, Payment } from 'mercadopago';
 
-let client: MercadoPagoConfig | null = null;
+let client: any = null;
 
 if (process.env.MP_ACCESS_TOKEN) {
     client = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN });
