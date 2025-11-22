@@ -43,9 +43,28 @@ const authenticate = (req: any, res: any, next: any) => {
   }
 };
 
-// Rota Raiz para Health Check (Evita Cannot GET /)
+// Rota Raiz para Health Check
 app.get('/', (req: any, res: any) => {
     res.send('✅ Edari API está online e funcionando!');
+});
+
+// Rota de Diagnóstico (Verifica se o banco foi populado)
+app.get('/api/status', async (req: any, res: any) => {
+    try {
+        const userCount = await prisma.user.count();
+        res.json({ 
+            online: true, 
+            database: 'connected', 
+            userCount 
+        });
+    } catch (error: any) {
+        console.error("Erro de conexão com banco:", error);
+        res.status(500).json({ 
+            online: true, 
+            database: 'error', 
+            message: error.message 
+        });
+    }
 });
 
 // Auth Routes
@@ -64,23 +83,34 @@ app.post('/api/auth/register', async (req: any, res: any) => {
     
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.status(201).json({ token, user });
-  } catch (error) { res.status(500).json({ message: 'Erro interno.' }); }
+  } catch (error) { 
+      console.error(error);
+      res.status(500).json({ message: 'Erro interno ao registrar.' }); 
+  }
 });
 
 app.post('/api/auth/login', async (req: any, res: any) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user || !user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
-        return res.status(401).json({ message: 'Credenciais inválidas.' });
+    
+    if (!user) {
+        return res.status(401).json({ message: 'Usuário não encontrado.' });
     }
+    
+    if (!user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
+        return res.status(401).json({ message: 'Senha incorreta.' });
+    }
+    
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ token, user });
-  } catch (error) { res.status(500).json({ message: 'Erro interno.' }); }
+  } catch (error) { 
+      console.error("Erro no login:", error);
+      res.status(500).json({ message: 'Erro interno no servidor.' }); 
+  }
 });
 
 app.post('/api/auth/verify-email', async (req: any, res: any) => {
-    // Simulação: Em produção, validar token enviado por email
     await prisma.user.update({ where: { email: req.body.email }, data: { isVerified: true } });
     res.json({ success: true });
 });
@@ -94,29 +124,30 @@ app.post('/api/auth/forgot-password', async (req: any, res: any) => {
 app.post('/api/auth/social', async (req: any, res: any) => {
   try {
     const { provider, token } = req.body;
+    
+    if (provider !== 'google') {
+        return res.status(400).json({ message: "Apenas Google é suportado neste momento." });
+    }
+
     let email = '';
     let name = '';
     let googleId = undefined;
 
-    if (provider === 'google') {
-        // Validação Real do Token Google
-        try {
-            const ticket = await googleClient.verifyIdToken({
-                idToken: token,
-                audience: GOOGLE_CLIENT_ID,
-            });
-            const payload = ticket.getPayload();
-            if (!payload || !payload.email) throw new Error("Token Google inválido");
-            
-            email = payload.email;
-            name = payload.name || 'Usuário Google';
-            googleId = payload.sub;
-        } catch (e) {
-            console.error("Erro ao validar Google Token:", e);
-            return res.status(401).json({ message: "Token Google inválido" });
-        }
-    } else {
-        return res.status(400).json({ message: "Provedor não suportado" });
+    // Validação Real do Token Google
+    try {
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: GOOGLE_CLIENT_ID,
+        });
+        const payload = ticket.getPayload();
+        if (!payload || !payload.email) throw new Error("Token Google inválido");
+        
+        email = payload.email;
+        name = payload.name || 'Usuário Google';
+        googleId = payload.sub;
+    } catch (e) {
+        console.error("Erro ao validar Google Token:", e);
+        return res.status(401).json({ message: "Token Google inválido" });
     }
 
     let user = await prisma.user.findUnique({ where: { email } });
@@ -132,8 +163,7 @@ app.post('/api/auth/social', async (req: any, res: any) => {
            }
        });
     } else {
-        // Atualiza IDs se necessário para vincular contas
-        if (provider === 'google' && !user.googleId) {
+        if (!user.googleId) {
             await prisma.user.update({ where: { id: user.id }, data: { googleId } });
         }
     }

@@ -2,13 +2,8 @@
 import { AuthContextType } from "../types";
 
 // --- CONFIGURAÇÃO DE CONEXÃO ---
-// Aqui definimos o endereço do seu servidor no Render.
-// Mantemos o '/api' no final para que as rotas funcionem corretamente.
 const PROD_API_URL = 'https://edari-api.onrender.com/api'; 
 
-// Lógica automática:
-// Se estiver rodando no seu computador (localhost), usa o backend local.
-// Se estiver publicado (Vercel/Netlify), usa o backend do Render.
 export const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000/api'
   : PROD_API_URL;
@@ -29,21 +24,24 @@ export const apiRequest = async <T>(endpoint: string, options: RequestInit = {})
     const response = await fetch(url, { ...options, headers });
 
     if (response.status === 401) {
-      // Se for a rota de login, não é sessão expirada, é credencial inválida.
-      // Retorna o erro para o componente tratar, sem deslogar/redirecionar.
-      if (endpoint.includes('/auth/login')) {
-         throw new Error('E-mail ou senha incorretos.');
+      // Lógica Crítica:
+      // Se a requisição for de LOGIN, retorna o erro para o componente exibir "Senha Inválida".
+      // NÃO deve redirecionar ou limpar o token, pois o usuário nem logou ainda.
+      if (endpoint.includes('/auth/login') || endpoint.includes('/auth/social')) {
+         const errorBody = await response.json().catch(() => ({}));
+         throw new Error(errorBody.message || 'Credenciais inválidas.');
       }
 
-      // Para outras rotas, aí sim é sessão expirada
+      // Se for qualquer OUTRA rota (ex: buscar pedidos), aí sim é sessão expirada.
       localStorage.removeItem('edari_token');
       localStorage.removeItem('edari_user_id');
       
       const currentPath = window.location.pathname;
+      // Evita loop de reload na home
       if (currentPath !== '/' && !currentPath.includes('login') && !currentPath.includes('cadastro')) {
          window.location.href = '/'; 
       }
-      throw new Error('Sessão expirada.');
+      throw new Error('Sessão expirada. Por favor, faça login novamente.');
     }
 
     if (!response.ok) {
