@@ -1,6 +1,5 @@
-
-const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
+import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
@@ -15,28 +14,27 @@ const SERVICES = [
 ];
 
 async function main() {
-  console.log('Iniciando seed...');
+  console.log('🌱 Iniciando seed...');
 
   for (const service of SERVICES) {
     await prisma.service.upsert({
       where: { id: service.id },
-      update: {},
+      update: { name: service.name, basePrice: service.basePrice },
       create: service,
     });
+    console.log(`  ✅ Serviço: ${service.name}`);
   }
 
-  // Gera o hash para a senha 'admin123'
   const passwordHash = await bcrypt.hash('admin123', 10);
   
-  // Criação do Admin
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { email: 'edari.docs@gmail.com' },
-    update: {},
+    update: { passwordHash },
     create: {
       email: 'edari.docs@gmail.com',
       name: 'Super Admin',
       role: 'ADMIN',
-      passwordHash: passwordHash, // Usa o hash correto para a senha 'admin123'
+      passwordHash,
       isVerified: true,
       phone: '85996231572',
       cpf: '068.263.473-50',
@@ -44,13 +42,49 @@ async function main() {
       birthDate: '23/01/1996'
     },
   });
+  console.log(`  ✅ Admin: ${admin.email} (senha: admin123)`);
 
-  console.log('Seed finalizado.');
+  const analyst = await prisma.user.upsert({
+    where: { email: 'analista@edari.com.br' },
+    update: { passwordHash },
+    create: {
+      email: 'analista@edari.com.br',
+      name: 'Bruno Analista',
+      role: 'ANALYST',
+      passwordHash,
+      isVerified: true,
+      phone: '11999998888',
+    },
+  });
+  console.log(`  ✅ Analista: ${analyst.email} (senha: admin123)`);
+
+  const client = await prisma.user.upsert({
+    where: { email: 'cliente@teste.com' },
+    update: { passwordHash },
+    create: {
+      email: 'cliente@teste.com',
+      name: 'Ana Cliente',
+      role: 'CLIENT',
+      passwordHash,
+      isVerified: true,
+      phone: '11988887777',
+      cpf: '123.456.789-00',
+      address: 'Rua Teste, 123',
+      birthDate: '01/01/1990'
+    },
+  });
+  console.log(`  ✅ Cliente: ${client.email} (senha: admin123)`);
+
+  console.log('\n🎉 Seed finalizado com sucesso!');
+  console.log('\n📋 Credenciais de acesso:');
+  console.log('   Admin:    edari.docs@gmail.com / admin123');
+  console.log('   Analista: analista@edari.com.br / admin123');
+  console.log('   Cliente:  cliente@teste.com / admin123');
 }
 
 main()
   .catch((e) => {
-    console.error(e);
+    console.error('❌ Erro no seed:', e);
     process.exit(1);
   })
   .finally(async () => {

@@ -8,8 +8,6 @@ import rateLimit from 'express-rate-limit';
 import { OAuth2Client } from 'google-auth-library';
 import { uploadFileToS3 } from './services/s3';
 import { sendEmail } from './services/ses';
-import { sendWhatsAppMessage } from './services/whatsapp';
-import { createPixPayment } from './services/mercadopago';
 import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -18,25 +16,31 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-dev';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
-// Cliente Google Auth
-const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+// Middleware Setup
+app.use(helmet());
+app.use(cors({ origin: '*' })); // Permite conexões locais e externas
+app.use(express.json());
 
-// Extend Request type to include user and file
+// Rate Limiting
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, 
+  max: 500 
+});
+app.use(limiter);
+
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
+
+// Tipagem extendida
 interface AuthRequest extends express.Request {
     user?: any;
     file?: any;
 }
 
-app.use(helmet() as any);
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }) as any);
-app.use(cors({ origin: process.env.FRONTEND_URL || '*' }) as any);
-app.use(express.json() as any);
-
-const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
-
+// Middleware de Autenticação
 const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Token ausente' });
+  
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
@@ -47,187 +51,134 @@ const authenticate = (req: express.Request, res: express.Response, next: express
   }
 };
 
-// Rota Raiz para Health Check
-app.get('/', (req: express.Request, res: express.Response) => {
-    res.send('✅ Edari API está online e funcionando!');
-});
+// Health Check
+app.get('/', (req, res) => { res.send('✅ Edari API está online!'); });
 
-// Rota de Diagnóstico (Verifica se o banco foi populado)
-app.get('/api/status', async (req: express.Request, res: express.Response) => {
+// Status Check
+app.get('/api/status', async (req, res) => {
     try {
         const userCount = await prisma.user.count();
-        res.json({ 
-            online: true, 
-            database: 'connected', 
-            userCount 
-        });
+        res.json({ online: true, database: 'connected', userCount });
     } catch (error: any) {
-        console.error("Erro de conexão com banco:", error);
-        res.status(500).json({ 
-            online: true, 
-            database: 'error', 
-            message: error.message 
-        });
+        console.error("DB Error:", error);
+        res.status(500).json({ online: true, database: 'error', message: error.message });
     }
 });
 
-// Auth Routes
-app.post('/api/auth/register', async (req: express.Request, res: express.Response) => {
+// --- AUTH ROUTES ---
+
+app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, cpf, phone, address, birthDate } = req.body;
-    if (!email || !name) return res.status(400).json({ message: 'Dados incompletos.' });
+    
+    if (!email || !name || !password) return res.status(400).json({ message: 'Dados incompletos.' });
+    
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return res.status(400).json({ message: 'E-mail já cadastrado.' });
     
-    const passwordHash = password ? await bcrypt.hash(password, 10) : null;
-    const user = await prisma.user.create({ data: { name, email, passwordHash, cpf, phone, address, birthDate } });
+    const passwordHash = await bcrypt.hash(password, 10);
     
-    // Send Confirmation Email
-    await sendEmail(email, "Confirme seu cadastro na Edari", `<p>Bem-vindo, ${name}! <a href="#">Clique aqui</a> para confirmar.</p>`);
+    const user = await prisma.user.create({ 
+        data: { name, email, passwordHash, cpf, phone, address, birthDate, role: 'CLIENT' } 
+    });
+    
+    // Envio de email não bloqueante
+    sendEmail(email, "Confirme seu cadastro", "Bem-vindo à Edari!").catch(console.error);
     
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ token, user });
-  } catch (error) { 
-      console.error(error);
-      res.status(500).json({ message: 'Erro interno ao registrar.' }); 
+    
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    res.status(201).json({ token, user: userWithoutPassword });
+  } catch (error: any) { 
+      console.error("Register Error:", error);
+      res.status(500).json({ message: 'Erro ao registrar usuário.' }); 
   }
 });
 
-app.post('/api/auth/login', async (req: express.Request, res: express.Response) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     
-    if (!user) {
-        return res.status(401).json({ message: 'Usuário não encontrado.' });
-    }
+    if (!user) return res.status(401).json({ message: 'Credenciais inválidas.' });
+    if (!user.passwordHash) return res.status(401).json({ message: 'Conta Google/Social. Use o botão correspondente.' });
     
-    if (!user.passwordHash || !(await bcrypt.compare(password, user.passwordHash))) {
-        return res.status(401).json({ message: 'Senha incorreta.' });
-    }
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    if (!isValid) return res.status(401).json({ message: 'Credenciais inválidas.' });
     
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user });
+    
+    const { passwordHash: _, ...userWithoutPassword } = user;
+    res.json({ token, user: userWithoutPassword });
   } catch (error) { 
-      console.error("Erro no login:", error);
-      res.status(500).json({ message: 'Erro interno no servidor.' }); 
+      console.error("Login Error:", error);
+      res.status(500).json({ message: 'Erro no servidor.' }); 
   }
 });
 
-app.post('/api/auth/verify-email', async (req: express.Request, res: express.Response) => {
-    await prisma.user.update({ where: { email: req.body.email }, data: { isVerified: true } });
-    res.json({ success: true });
-});
-
-app.post('/api/auth/forgot-password', async (req: express.Request, res: express.Response) => {
-    const user = await prisma.user.findUnique({ where: { email: req.body.email } });
-    if (user) await sendEmail(user.email, "Recuperação de Senha", "<p>Clique aqui para redefinir...</p>");
-    res.json({ message: "Se o email existir, enviamos as instruções." });
-});
-
-app.post('/api/auth/social', async (req: express.Request, res: express.Response) => {
-  try {
-    const { provider, token } = req.body;
-    
-    if (provider !== 'google') {
-        return res.status(400).json({ message: "Apenas Google é suportado neste momento." });
-    }
-
-    let email = '';
-    let name = '';
-    let googleId = undefined;
-
-    // Validação Real do Token Google
-    try {
-        const ticket = await googleClient.verifyIdToken({
-            idToken: token,
-            audience: GOOGLE_CLIENT_ID,
-        });
-        const payload = ticket.getPayload();
-        if (!payload || !payload.email) throw new Error("Token Google inválido");
-        
-        email = payload.email;
-        name = payload.name || 'Usuário Google';
-        googleId = payload.sub;
-    } catch (e) {
-        console.error("Erro ao validar Google Token:", e);
-        return res.status(401).json({ message: "Token Google inválido" });
-    }
-
-    let user = await prisma.user.findUnique({ where: { email } });
-    
-    if (!user) {
-       user = await prisma.user.create({
-           data: {
-               email,
-               name,
-               isVerified: true,
-               googleId,
-               role: 'CLIENT'
-           }
-       });
-    } else {
-        if (!user.googleId) {
-            await prisma.user.update({ where: { id: user.id }, data: { googleId } });
-        }
-    }
-    
-    const appToken = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token: appToken, user });
-    
-  } catch (error) {
-      console.error("Social login error:", error);
-      res.status(500).json({ message: "Erro no login social" });
-  }
-});
-
-// Order Routes
-app.get('/api/orders', authenticate, async (req: express.Request, res: express.Response) => {
+// Rota essencial para persistência de login
+app.get('/api/auth/me', authenticate, async (req, res) => {
     const authReq = req as AuthRequest;
-    const where = authReq.user.role === 'CLIENT' ? { clientId: authReq.user.id } : authReq.user.role === 'ANALYST' ? { analystId: authReq.user.id } : {};
-    const orders = await prisma.order.findMany({ where, include: { service: true, client: true, analyst: true }, orderBy: { createdAt: 'desc' } });
-    res.json(orders);
+    try {
+        const user = await prisma.user.findUnique({ where: { id: authReq.user.id } });
+        if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
+        
+        const { passwordHash: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+    } catch (error) {
+        res.status(500).json({ message: 'Erro ao buscar perfil' });
+    }
 });
 
-app.post('/api/orders', authenticate, async (req: express.Request, res: express.Response) => {
+// --- ORDER ROUTES ---
+
+app.get('/api/orders', authenticate, async (req, res) => {
+    const authReq = req as AuthRequest;
+    try {
+        const where = authReq.user.role === 'CLIENT' 
+            ? { clientId: authReq.user.id } 
+            : authReq.user.role === 'ANALYST' 
+                ? { OR: [{ analystId: authReq.user.id }, { status: 'PENDING' }] } 
+                : {}; 
+                
+        const orders = await prisma.order.findMany({ 
+            where, 
+            include: { service: true, client: true, analyst: true, messages: { include: { sender: true } }, documents: true }, 
+            orderBy: { createdAt: 'desc' } 
+        });
+        res.json(orders);
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao buscar pedidos" });
+    }
+});
+
+app.post('/api/orders', authenticate, async (req, res) => {
     const authReq = req as AuthRequest;
     const { serviceId, details, description } = req.body;
-    const service = await prisma.service.findUnique({ where: { id: serviceId } });
-    if (!service) return res.status(400).json({ message: 'Serviço inválido' });
-    
-    const order = await prisma.order.create({
-        data: { 
-            clientId: authReq.user.id, 
-            serviceId, 
-            details: details || {}, 
-            description, 
-            status: service.basePrice ? 'PENDING' : 'AWAITING_QUOTE', 
-            totalAmount: service.basePrice || 0 
-        }
-    });
-    
-    res.status(201).json(order);
-});
-
-app.post('/api/orders/:id/upload', authenticate, upload.single('file') as any, async (req: express.Request, res: express.Response) => {
-    const authReq = req as AuthRequest;
-    if (!authReq.file) return res.status(400).json({ message: 'Arquivo ausente' });
     
     try {
-        const publicUrl = await uploadFileToS3(authReq.file, `orders/${req.params.id}`);
-        const doc = await prisma.document.create({
-            data: { orderId: req.params.id, name: authReq.file.originalname, mimeType: authReq.file.mimetype, size: authReq.file.size, s3Key: publicUrl }
+        const service = await prisma.service.findUnique({ where: { id: serviceId } });
+        if (!service) return res.status(400).json({ message: 'Serviço inválido' });
+        
+        const order = await prisma.order.create({
+            data: { 
+                clientId: authReq.user.id, 
+                serviceId, 
+                details: details || {}, 
+                description, 
+                status: service.basePrice ? 'PENDING' : 'AWAITING_QUOTE', 
+                totalAmount: service.basePrice || 0 
+            }
         });
-        res.status(201).json(doc);
-    } catch (error) {
-        res.status(500).json({ message: "Erro ao fazer upload" });
+        
+        const fullOrder = await prisma.order.findUnique({
+             where: { id: order.id },
+             include: { service: true, client: true }
+        });
+        res.status(201).json(fullOrder);
+    } catch (error: any) {
+        res.status(500).json({ message: "Erro ao criar pedido: " + error.message });
     }
 });
 
-// Webhook MP
-app.post('/api/webhooks/mp', async (req: express.Request, res: express.Response) => {
-    console.log("Webhook MP recebido:", req.body);
-    res.sendStatus(200);
-});
-
-app.listen(PORT, () => console.log(`Server running on ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENT
+  ANALYST
+  ADMIN
+}
+
+enum OrderStatus {
+  AWAITING_QUOTE
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELED
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String?
+  name          String
+  role          Role      @default(CLIENT)
+  
+  cpf           String?
+  phone         String?
+  address       String?
+  birthDate     String?
+  
+  isVerified    Boolean   @default(false)
+  googleId      String?   @unique
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  orders        Order[]   @relation("ClientOrders")
+  workedOrders  Order[]   @relation("AnalystOrders")
+  messages      Message[]
+}
+
+model Service {
+  id          String  @id
+  name        String
+  description String?
+  basePrice   Decimal?
+  duration    String?
+  features    String[]
+  orders      Order[]
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  readableId      Int         @default(autoincrement())
+  
+  clientId        String
+  client          User        @relation("ClientOrders", fields: [clientId], references: [id])
+  
+  serviceId       String
+  service         Service     @relation(fields: [serviceId], references: [id])
+  
+  analystId       String?
+  analyst         User?       @relation("AnalystOrders", fields: [analystId], references: [id])
+  
+  status          OrderStatus @default(AWAITING_QUOTE)
+  totalAmount     Decimal     @default(0.00)
+  
+  details         Json        
+  description     String?     
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  paymentConfirmedAt DateTime?
+  
+  documents       Document[]
+  messages        Message[]
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  
+  name      String
+  s3Key     String
+  mimeType  String
+  size      Int
+  
+  createdAt DateTime @default(now())
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id])
+  
+  senderId  String
+  sender    User     @relation(fields: [senderId], references: [id])
+  
+  content   String   
+  createdAt DateTime @default(now())
+}

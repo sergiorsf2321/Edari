@@ -1,12 +1,11 @@
-
 import { User, Role } from "../types";
 import { apiRequest } from "./api";
 
 export const AuthService = {
-  login: async (email: string, role: Role): Promise<User | null> => {
+  login: async (email: string, role: Role, password?: string): Promise<User | null> => {
     const response = await apiRequest<{ token: string, user: User }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password: 'password_do_form' }) 
+      body: JSON.stringify({ email, password }) 
     });
     
     localStorage.setItem('edari_token', response.token);
@@ -14,7 +13,15 @@ export const AuthService = {
     return response.user;
   },
 
-  // Função de Diagnóstico
+  register: async (userData: Partial<User> & { password?: string }): Promise<void> => {
+    const response = await apiRequest<{ token: string, user: User }>('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(userData) 
+    });
+    localStorage.setItem('edari_token', response.token);
+    localStorage.setItem('edari_user_id', response.user.id);
+  },
+
   checkServerStatus: async (): Promise<{ online: boolean, userCount: number }> => {
       try {
           return await apiRequest<{ online: boolean, userCount: number }>('/status');
@@ -23,21 +30,21 @@ export const AuthService = {
       }
   },
 
-  register: async (userData: Partial<User>): Promise<void> => {
-    const response = await apiRequest<{ token: string, user: User }>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ ...userData, password: 'password_do_form' }) 
-    });
-    localStorage.setItem('edari_token', response.token);
-    localStorage.setItem('edari_user_id', response.user.id);
-  },
-
   verifyEmail: async (email: string): Promise<void> => {
       await apiRequest('/auth/verify-email', { method: 'POST', body: JSON.stringify({ email }) });
   },
 
   getCurrentUser: async (): Promise<User | null> => {
-     return null; 
+     const token = localStorage.getItem('edari_token');
+     if (!token) return null;
+
+     try {
+         const user = await apiRequest<User>('/auth/me');
+         return user;
+     } catch (error) {
+         localStorage.removeItem('edari_token');
+         return null;
+     }
   },
   
   socialLogin: async (provider: 'google' | 'apple', token: string): Promise<User> => {
