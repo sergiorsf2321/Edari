@@ -114,8 +114,8 @@ model Message {
   
   attachmentId String? // Link opcional para um Document
   attachment   Document? @relation(fields: [attachmentId], references: [id])
-}
 
 @@index([orderId, createdAt])
 }
+
 
