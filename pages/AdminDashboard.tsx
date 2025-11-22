@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../App';
 import { MOCK_USERS } from '../data/mocks';
-import { Order, OrderStatus, Role, Page } from '../types';
+// CORREÇÃO: Adicionado 'User' aos imports para tipagem explícita
+import { Order, OrderStatus, Role, Page, User } from '../types';
 import { 
     BarChart, 
     Bar, 
@@ -21,7 +22,9 @@ const AdminDashboard: React.FC = () => {
     const { orders, updateOrder, setPage, setSelectedOrder, addNotification } = useAuth();
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
-    const analysts = MOCK_USERS.filter(u => u.role === Role.Analyst);
+    
+    // CORREÇÃO: Tipagem explícita para evitar erro 'never'
+    const analysts: User[] = MOCK_USERS.filter(u => u.role === Role.Analyst);
 
     const filteredOrders = useMemo(() => {
         let tempOrders = orders;
