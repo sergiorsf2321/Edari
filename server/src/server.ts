@@ -585,7 +585,7 @@ app.post('/api/payments', authenticate, async (req: Request, res: Response) => {
   });
   
   if (!order) return res.status(404).json({ error: true, message: 'Pedido não encontrado' });
-  if (order.totalAmount === 0) return res.status(400).json({ error: true, message: 'Pedido sem valor definido' });
+  if (Number(pedido.total) === 0) return res.status(400).json({ error: true, message: 'Pedido sem valor definido' });
   
   try {
     const pixData = await createPixPayment(
