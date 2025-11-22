@@ -22,8 +22,8 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // CORREÇÃO: Uso de Generics <User[]> para garantir a tipagem correta
-    const [analysts, setAnalysts] = useState<User[]>([]); 
+    // CORREÇÃO: Tipagem explícita para evitar erro 'never'
+    const [analysts, setAnalysts] = useState<User[]>([]);
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
     useEffect(() => {
@@ -141,6 +141,7 @@ const AdminDashboard: React.FC = () => {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-bold text-brand-primary mb-8">Painel Administrativo</h1>
                 
+                {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Total</h3><p className="text-3xl font-bold">{stats.total}</p></div>
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Aguard. Orçamento</h3><p className="text-3xl font-bold text-purple-500">{stats.awaitingQuote}</p></div>
@@ -149,6 +150,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Concluídos</h3><p className="text-3xl font-bold text-green-500">{stats.completed}</p></div>
                 </div>
 
+                {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Distribuição por Status</h3>
@@ -190,6 +192,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Financial Stats */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Balanço do Mês (Concluídos)</h3>
@@ -275,7 +278,7 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {analysts.map((a) => (
+                                                                {(analysts || []).map((a) => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
                                                             </select>
@@ -292,7 +295,7 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {analysts.map((a) => (
+                                                                {(analysts || []).map((a) => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
                                                             </select>
