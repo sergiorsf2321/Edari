@@ -124,19 +124,42 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// ... (imports e configurações anteriores)
+
 // Auth: Get Me
 app.get('/api/auth/me', authenticate, async (req, res) => {
+    // ... (código existente)
+});
+
+// --- NOVA ROTA: Listar Usuários (Para o Admin buscar analistas) ---
+app.get('/api/users', authenticate, async (req, res) => {
     const authReq = req as AuthRequest;
+    const { role } = req.query;
+
     try {
-        const user = await prisma.user.findUnique({ where: { id: authReq.user.id } });
-        if (!user) return res.status(404).json({ message: 'Usuário não encontrado' });
+        // Opcional: Verificar se quem pede é ADMIN (segurança)
+        if (authReq.user.role !== 'ADMIN') {
+             return res.status(403).json({ message: 'Acesso negado.' });
+        }
+
+        const where: any = {};
+        if (role) {
+            where.role = role;
+        }
+
+        const users = await prisma.user.findMany({
+            where,
+            select: { id: true, name: true, email: true, role: true } // Retorna apenas dados seguros
+        });
         
-        const { passwordHash: _, ...userWithoutPassword } = user;
-        res.json(userWithoutPassword);
+        res.json(users);
     } catch (error) {
-        res.status(500).json({ message: 'Erro ao buscar perfil' });
+        console.error(error);
+        res.status(500).json({ message: 'Erro ao buscar usuários' });
     }
 });
+
+// ... (resto do arquivo: profile, orders, etc.)
 
 // Auth: Update Profile
 app.patch('/api/auth/profile', authenticate, async (req, res) => {

@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../App';
-import { MOCK_USERS } from '../data/mocks';
+import { AuthService } from '../services/authService'; // Importar AuthService
 import { Order, OrderStatus, Role, Page, User } from '../types';
 import { 
     BarChart, 
@@ -16,14 +16,34 @@ import {
     Cell
 } from 'recharts';
 import StatusBadge from '../components/StatusBadge';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const AdminDashboard: React.FC = () => {
     const { orders, updateOrder, setPage, setSelectedOrder, addNotification } = useAuth();
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // CORREÇÃO DEFINITIVA: Forçando o tipo com 'as User[]' para evitar erro TS2339
-    const analysts = (MOCK_USERS.filter(u => u.role === Role.Analyst) || []) as User[];
+    // --- MUDANÇA: Estado para analistas reais da API ---
+    const [analysts, setAnalysts] = useState<User[]>([]);
+    const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
+
+    // Buscar analistas ao carregar a página
+    useEffect(() => {
+        const fetchAnalysts = async () => {
+            setIsLoadingAnalysts(true);
+            try {
+                const data = await AuthService.getUsersByRole(Role.Analyst);
+                setAnalysts(data);
+            } catch (error) {
+                console.error("Erro ao buscar analistas", error);
+                addNotification("Não foi possível carregar a lista de analistas.", "error");
+            } finally {
+                setIsLoadingAnalysts(false);
+            }
+        };
+        fetchAnalysts();
+    }, [addNotification]);
+    // ---------------------------------------------------
 
     const filteredOrders = useMemo(() => {
         let tempOrders = orders;
@@ -115,7 +135,7 @@ const AdminDashboard: React.FC = () => {
         }));
     }, [orders]);
 
-    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e']; // Purple, Amber, Blue, Green
+    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e']; 
 
     return (
         <div className="bg-slate-50 py-12">
@@ -250,7 +270,9 @@ const AdminDashboard: React.FC = () => {
                                                     case OrderStatus.AwaitingQuote:
                                                         return <span className="text-slate-500 italic text-xs">Aguardando orçamento</span>;
                                                     case OrderStatus.Pending:
-                                                        return (
+                                                        return isLoadingAnalysts ? (
+                                                            <span className="text-xs text-slate-400">Carregando...</span>
+                                                        ) : (
                                                             <select 
                                                                 onChange={(e) => assignAnalyst(order.id, e.target.value)} 
                                                                 onClick={(e) => e.stopPropagation()}
