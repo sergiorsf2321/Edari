@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../App';
 import { MOCK_USERS } from '../data/mocks';
-// CORREÇÃO: Adicionado 'User' aos imports para tipagem explícita
 import { Order, OrderStatus, Role, Page, User } from '../types';
 import { 
     BarChart, 
@@ -23,8 +22,8 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // CORREÇÃO: Tipagem explícita para evitar erro 'never'
-    const analysts: User[] = MOCK_USERS.filter(u => u.role === Role.Analyst);
+    // CORREÇÃO DEFINITIVA: Forçando o tipo com 'as User[]' para evitar erro TS2339
+    const analysts = (MOCK_USERS.filter(u => u.role === Role.Analyst) || []) as User[];
 
     const filteredOrders = useMemo(() => {
         let tempOrders = orders;
