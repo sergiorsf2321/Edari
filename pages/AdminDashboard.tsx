@@ -22,11 +22,10 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // Estado tipado corretamente para evitar erros de 'never'
+    // CORREÇÃO DEFINITIVA: Usando Generics <User[]> para definir o tipo do estado explicitamente
     const [analysts, setAnalysts] = useState<User[]>([]);
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
-    // Busca analistas reais da API ao carregar
     useEffect(() => {
         const fetchAnalysts = async () => {
             setIsLoadingAnalysts(true);
@@ -279,7 +278,10 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {analysts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                                                {/* AQUI ESTÁ A MAGIA: TypeScript agora sabe que 'a' é do tipo User */}
+                                                                {analysts.map((a: User) => (
+                                                                    <option key={a.id} value={a.id}>{a.name}</option>
+                                                                ))}
                                                             </select>
                                                         );
                                                     case OrderStatus.InProgress:
@@ -294,7 +296,9 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {analysts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                                                                {analysts.map((a: User) => (
+                                                                    <option key={a.id} value={a.id}>{a.name}</option>
+                                                                ))}
                                                             </select>
                                                         );
                                                     default:
