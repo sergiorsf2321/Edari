@@ -22,8 +22,8 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // CORREÇÃO DEFINITIVA: Usando Generics <User[]> para definir o tipo do estado explicitamente
-    const [analysts, setAnalysts] = useState<User[]>([]);
+    // BLINDAGEM 1: Inicialização com Cast Explícito
+    const [analysts, setAnalysts] = useState<User[]>([] as User[]);
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
     useEffect(() => {
@@ -36,13 +36,12 @@ const AdminDashboard: React.FC = () => {
                 }
             } catch (error) {
                 console.error("Erro ao buscar analistas", error);
-                addNotification("Não foi possível carregar a lista de analistas.", "error");
             } finally {
                 setIsLoadingAnalysts(false);
             }
         };
         fetchAnalysts();
-    }, [addNotification]);
+    }, []);
 
     const filteredOrders = useMemo(() => {
         let tempOrders = orders;
@@ -61,7 +60,8 @@ const AdminDashboard: React.FC = () => {
     }, [orders, filterStatus, searchTerm]);
 
     const assignAnalyst = (orderId: string, analystId: string) => {
-        const analyst = analysts.find(a => a.id === analystId);
+        // BLINDAGEM 2: Tipagem na busca
+        const analyst = analysts.find((a: User) => a.id === analystId);
         if (!analyst) return;
         
         const orderToUpdate = orders.find(o => o.id === orderId);
@@ -186,7 +186,7 @@ const AdminDashboard: React.FC = () => {
                                 <YAxis allowDecimals={false} width={40}/>
                                 <Tooltip />
                                 <Legend wrapperStyle={{fontSize: '14px'}}/>
-                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} />
+                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} /> 
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -278,7 +278,7 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
-                                                                {/* AQUI ESTÁ A MAGIA: TypeScript agora sabe que 'a' é do tipo User */}
+                                                                {/* BLINDAGEM 3: Tipagem explícita (a: User) dentro do MAP */}
                                                                 {analysts.map((a: User) => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
@@ -296,6 +296,7 @@ const AdminDashboard: React.FC = () => {
                                                                 defaultValue=""
                                                             >
                                                                 <option value="" disabled>Atribuir...</option>
+                                                                {/* BLINDAGEM 3: Tipagem explícita (a: User) dentro do MAP */}
                                                                 {analysts.map((a: User) => (
                                                                     <option key={a.id} value={a.id}>{a.name}</option>
                                                                 ))}
