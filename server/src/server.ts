@@ -8,7 +8,8 @@ import rateLimit from 'express-rate-limit';
 import { OAuth2Client } from 'google-auth-library';
 import { uploadFileToS3 } from './services/s3';
 import { sendEmail } from './services/ses';
-import { PrismaClient } from '@prisma/client';
+// CORREÇÃO 1: Importar OrderStatus e Prisma para tipagem correta
+import { PrismaClient, Prisma, OrderStatus } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -16,12 +17,20 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-dev';
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// Extend Request type
+interface AuthRequest extends express.Request {
+    user?: any;
+    file?: any;
+}
+
 // Middleware Setup
 app.use(helmet());
-app.use(cors({ origin: '*' })); // Permite conexões locais e externas
+app.use(cors({ origin: '*' })); // Permitir desenvolvimento local
 app.use(express.json());
 
-// Rate Limiting
+// Rate Limiting (Relaxado para dev)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, 
   max: 500 
@@ -30,26 +39,24 @@ app.use(limiter);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-// Tipagem extendida
-interface AuthRequest extends express.Request {
-    user?: any;
-    file?: any;
-}
-
 // Middleware de Autenticação
 const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Token ausente' });
   
   const token = authHeader.split(' ')[1];
+  if (!token) return res.status(401).json({ error: 'Token malformado' });
+
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
     (req as AuthRequest).user = decoded;
     next();
   } catch (err) {
-    return res.status(401).json({ error: 'Token inválido' });
+    return res.status(401).json({ error: 'Token inválido ou expirado' });
   }
 };
+
+// --- ROUTES ---
 
 // Health Check
 app.get('/', (req, res) => { res.send('✅ Edari API está online!'); });
@@ -65,8 +72,7 @@ app.get('/api/status', async (req, res) => {
     }
 });
 
-// --- AUTH ROUTES ---
-
+// Auth: Register
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { name, email, password, cpf, phone, address, birthDate } = req.body;
@@ -82,11 +88,12 @@ app.post('/api/auth/register', async (req, res) => {
         data: { name, email, passwordHash, cpf, phone, address, birthDate, role: 'CLIENT' } 
     });
     
-    // Envio de email não bloqueante
+    // Tenta enviar email, mas não falha o request se der erro no SES simulado
     sendEmail(email, "Confirme seu cadastro", "Bem-vindo à Edari!").catch(console.error);
     
     const token = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
     
+    // Remove hash da resposta
     const { passwordHash: _, ...userWithoutPassword } = user;
     res.status(201).json({ token, user: userWithoutPassword });
   } catch (error: any) { 
@@ -95,13 +102,14 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
+// Auth: Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
     
     if (!user) return res.status(401).json({ message: 'Credenciais inválidas.' });
-    if (!user.passwordHash) return res.status(401).json({ message: 'Conta Google/Social. Use o botão correspondente.' });
+    if (!user.passwordHash) return res.status(401).json({ message: 'Use o login social para esta conta.' });
     
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) return res.status(401).json({ message: 'Credenciais inválidas.' });
@@ -116,7 +124,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Rota essencial para persistência de login
+// Auth: Get Me
 app.get('/api/auth/me', authenticate, async (req, res) => {
     const authReq = req as AuthRequest;
     try {
@@ -130,16 +138,41 @@ app.get('/api/auth/me', authenticate, async (req, res) => {
     }
 });
 
-// --- ORDER ROUTES ---
+// Auth: Update Profile
+app.patch('/api/auth/profile', authenticate, async (req, res) => {
+    const authReq = req as AuthRequest;
+    const { cpf, address, phone } = req.body;
+    try {
+        const updatedUser = await prisma.user.update({
+            where: { id: authReq.user.id },
+            data: { cpf, address, phone }
+        });
+        const { passwordHash: _, ...userWithoutPassword } = updatedUser;
+        res.json(userWithoutPassword);
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao atualizar perfil" });
+    }
+});
 
+// Orders: List
 app.get('/api/orders', authenticate, async (req, res) => {
     const authReq = req as AuthRequest;
     try {
-        const where = authReq.user.role === 'CLIENT' 
-            ? { clientId: authReq.user.id } 
-            : authReq.user.role === 'ANALYST' 
-                ? { OR: [{ analystId: authReq.user.id }, { status: 'PENDING' }] } 
-                : {}; 
+        // CORREÇÃO 2: Tipagem explícita do WhereInput
+        let where: Prisma.OrderWhereInput = {};
+
+        if (authReq.user.role === 'CLIENT') {
+            where = { clientId: authReq.user.id };
+        } else if (authReq.user.role === 'ANALYST') {
+            where = { 
+                OR: [
+                    { analystId: authReq.user.id }, 
+                    // CORREÇÃO 3: Uso do Enum OrderStatus
+                    { status: OrderStatus.PENDING } 
+                ] 
+            };
+        }
+        // Se for ADMIN, mantém {} (busca tudo)
                 
         const orders = await prisma.order.findMany({ 
             where, 
@@ -148,10 +181,12 @@ app.get('/api/orders', authenticate, async (req, res) => {
         });
         res.json(orders);
     } catch (error) {
+        console.error(error);
         res.status(500).json({ message: "Erro ao buscar pedidos" });
     }
 });
 
+// Orders: Create
 app.post('/api/orders', authenticate, async (req, res) => {
     const authReq = req as AuthRequest;
     const { serviceId, details, description } = req.body;
@@ -175,9 +210,54 @@ app.post('/api/orders', authenticate, async (req, res) => {
              where: { id: order.id },
              include: { service: true, client: true }
         });
+
         res.status(201).json(fullOrder);
     } catch (error: any) {
+        console.error(error);
         res.status(500).json({ message: "Erro ao criar pedido: " + error.message });
+    }
+});
+
+// Orders: Upload
+app.post('/api/orders/:id/upload', authenticate, upload.single('file'), async (req: any, res: any) => {
+    const authReq = req as AuthRequest;
+    if (!authReq.file) return res.status(400).json({ message: 'Arquivo ausente' });
+    
+    try {
+        const publicUrl = await uploadFileToS3(authReq.file, `orders/${req.params.id}`);
+        
+        const doc = await prisma.document.create({
+            data: { 
+                orderId: req.params.id, 
+                name: authReq.file.originalname, 
+                mimeType: authReq.file.mimetype, 
+                size: authReq.file.size, 
+                s3Key: publicUrl 
+            }
+        });
+        res.status(201).json(doc);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Erro ao fazer upload" });
+    }
+});
+
+// Orders: Send Message
+app.post('/api/orders/:id/messages', authenticate, async (req, res) => {
+    const authReq = req as AuthRequest;
+    const { content } = req.body;
+    try {
+        const message = await prisma.message.create({
+            data: {
+                orderId: req.params.id,
+                senderId: authReq.user.id,
+                content
+            },
+            include: { sender: true }
+        });
+        res.status(201).json(message);
+    } catch (error) {
+        res.status(500).json({ message: "Erro ao enviar mensagem" });
     }
 });
 
