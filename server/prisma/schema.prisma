@@ -117,3 +117,5 @@ model Message {
 }
 
 @@index([orderId, createdAt])
+}
+
