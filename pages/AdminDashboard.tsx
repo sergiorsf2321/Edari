@@ -1,3 +1,13 @@
+O erro Property 'name' does not exist on type 'never' persiste porque o TypeScript ainda está a inferir que o estado analysts é uma lista vazia sem tipo ([]), provavelmente porque a definição genérica <User[]> se perdeu ou não foi interpretada corretamente no ambiente de build.
+
+Para resolver isto definitivamente, vamos usar uma sintaxe de "Type Assertion" (Forçar Tipo) na inicialização do estado. Isso é "à prova de falhas" para o compilador.
+
+Substitua todo o conteúdo do arquivo pages/AdminDashboard.tsx por este código:
+
+Arquivo: pages/AdminDashboard.tsx
+
+TypeScript
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../App';
 import { AuthService } from '../services/authService'; 
@@ -22,26 +32,28 @@ const AdminDashboard: React.FC = () => {
     const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
     const [searchTerm, setSearchTerm] = useState('');
     
-    // --- NOVA LÓGICA: Analistas vindos da API (Banco de Dados) ---
-    const [analysts, setAnalysts] = useState<User[]>([]);
+    // CORREÇÃO FINAL: Usando 'as User[]' para garantir que o TypeScript entenda o tipo
+    const [analysts, setAnalysts] = useState([] as User[]);
     const [isLoadingAnalysts, setIsLoadingAnalysts] = useState(false);
 
     useEffect(() => {
         const fetchAnalysts = async () => {
             setIsLoadingAnalysts(true);
             try {
-                // Busca apenas usuários com cargo de Analista
                 const data = await AuthService.getUsersByRole(Role.Analyst);
-                setAnalysts(data);
+                // Garante que data é um array antes de setar
+                if (Array.isArray(data)) {
+                    setAnalysts(data);
+                }
             } catch (error) {
                 console.error("Erro ao buscar analistas", error);
+                addNotification("Erro ao carregar lista de analistas.", "error");
             } finally {
                 setIsLoadingAnalysts(false);
             }
         };
         fetchAnalysts();
-    }, []);
-    // -------------------------------------------------------------
+    }, [addNotification]);
 
     const filteredOrders = useMemo(() => {
         let tempOrders = orders;
@@ -122,7 +134,7 @@ const AdminDashboard: React.FC = () => {
 
     const serviceChartData = useMemo(() => {
         const serviceCounts = orders.reduce((acc, order) => {
-            const name = order.service.name.split(' ')[0]; 
+            const name = order.service.name.split(' ')[0]; // Use first word for brevity
             acc[name] = (acc[name] || 0) + 1;
             return acc;
         }, {} as Record<string, number>);
@@ -133,13 +145,14 @@ const AdminDashboard: React.FC = () => {
         }));
     }, [orders]);
 
-    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e']; 
+    const STATUS_COLORS = ['#8b5cf6', '#f59e0b', '#3b82f6', '#22c55e']; // Purple, Amber, Blue, Green
 
     return (
         <div className="bg-slate-50 py-12">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <h1 className="text-3xl font-bold text-brand-primary mb-8">Painel Administrativo</h1>
                 
+                {/* Stats */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Total</h3><p className="text-3xl font-bold">{stats.total}</p></div>
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Aguard. Orçamento</h3><p className="text-3xl font-bold text-purple-500">{stats.awaitingQuote}</p></div>
@@ -148,6 +161,7 @@ const AdminDashboard: React.FC = () => {
                     <div className="bg-white p-6 rounded-lg shadow"><h3 className="text-slate-500">Concluídos</h3><p className="text-3xl font-bold text-green-500">{stats.completed}</p></div>
                 </div>
 
+                {/* Charts */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Distribuição por Status</h3>
@@ -183,12 +197,13 @@ const AdminDashboard: React.FC = () => {
                                 <YAxis allowDecimals={false} width={40}/>
                                 <Tooltip />
                                 <Legend wrapperStyle={{fontSize: '14px'}}/>
-                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} /> 
+                                <Bar dataKey="Pedidos" fill="#1e3a8a" radius={[4, 4, 0, 0]} /> {/* brand-primary */}
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
                 </div>
 
+                {/* Financial Stats */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
                     <div className="bg-white p-6 rounded-lg shadow">
                         <h3 className="text-lg font-semibold text-slate-700 mb-4">Balanço do Mês (Concluídos)</h3>
@@ -214,6 +229,7 @@ const AdminDashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
+
 
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                     <div className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200">
