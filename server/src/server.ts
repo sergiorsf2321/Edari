@@ -1,4 +1,3 @@
-
 import express from 'express';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
@@ -11,8 +10,7 @@ import { uploadFileToS3 } from './services/s3';
 import { sendEmail } from './services/ses';
 import { sendWhatsAppMessage } from './services/whatsapp';
 import { createPixPayment } from './services/mercadopago';
-
-const { PrismaClient } = require('@prisma/client');
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const app = express();
@@ -23,6 +21,12 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 // Cliente Google Auth
 const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
 
+// Extend Request type to include user and file
+interface AuthRequest extends express.Request {
+    user?: any;
+    file?: any;
+}
+
 app.use(helmet() as any);
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 100 }) as any);
 app.use(cors({ origin: process.env.FRONTEND_URL || '*' }) as any);
@@ -30,13 +34,13 @@ app.use(express.json() as any);
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-const authenticate = (req: any, res: any, next: any) => {
+const authenticate = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Token ausente' });
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as any;
-    req.user = decoded;
+    (req as AuthRequest).user = decoded;
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Token inválido' });
@@ -44,12 +48,12 @@ const authenticate = (req: any, res: any, next: any) => {
 };
 
 // Rota Raiz para Health Check
-app.get('/', (req: any, res: any) => {
+app.get('/', (req: express.Request, res: express.Response) => {
     res.send('✅ Edari API está online e funcionando!');
 });
 
 // Rota de Diagnóstico (Verifica se o banco foi populado)
-app.get('/api/status', async (req: any, res: any) => {
+app.get('/api/status', async (req: express.Request, res: express.Response) => {
     try {
         const userCount = await prisma.user.count();
         res.json({ 
@@ -68,7 +72,7 @@ app.get('/api/status', async (req: any, res: any) => {
 });
 
 // Auth Routes
-app.post('/api/auth/register', async (req: any, res: any) => {
+app.post('/api/auth/register', async (req: express.Request, res: express.Response) => {
   try {
     const { name, email, password, cpf, phone, address, birthDate } = req.body;
     if (!email || !name) return res.status(400).json({ message: 'Dados incompletos.' });
@@ -89,7 +93,7 @@ app.post('/api/auth/register', async (req: any, res: any) => {
   }
 });
 
-app.post('/api/auth/login', async (req: any, res: any) => {
+app.post('/api/auth/login', async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
     const user = await prisma.user.findUnique({ where: { email } });
@@ -110,18 +114,18 @@ app.post('/api/auth/login', async (req: any, res: any) => {
   }
 });
 
-app.post('/api/auth/verify-email', async (req: any, res: any) => {
+app.post('/api/auth/verify-email', async (req: express.Request, res: express.Response) => {
     await prisma.user.update({ where: { email: req.body.email }, data: { isVerified: true } });
     res.json({ success: true });
 });
 
-app.post('/api/auth/forgot-password', async (req: any, res: any) => {
+app.post('/api/auth/forgot-password', async (req: express.Request, res: express.Response) => {
     const user = await prisma.user.findUnique({ where: { email: req.body.email } });
     if (user) await sendEmail(user.email, "Recuperação de Senha", "<p>Clique aqui para redefinir...</p>");
     res.json({ message: "Se o email existir, enviamos as instruções." });
 });
 
-app.post('/api/auth/social', async (req: any, res: any) => {
+app.post('/api/auth/social', async (req: express.Request, res: express.Response) => {
   try {
     const { provider, token } = req.body;
     
@@ -178,20 +182,22 @@ app.post('/api/auth/social', async (req: any, res: any) => {
 });
 
 // Order Routes
-app.get('/api/orders', authenticate, async (req: any, res: any) => {
-    const where = req.user.role === 'CLIENT' ? { clientId: req.user.id } : req.user.role === 'ANALYST' ? { analystId: req.user.id } : {};
+app.get('/api/orders', authenticate, async (req: express.Request, res: express.Response) => {
+    const authReq = req as AuthRequest;
+    const where = authReq.user.role === 'CLIENT' ? { clientId: authReq.user.id } : authReq.user.role === 'ANALYST' ? { analystId: authReq.user.id } : {};
     const orders = await prisma.order.findMany({ where, include: { service: true, client: true, analyst: true }, orderBy: { createdAt: 'desc' } });
     res.json(orders);
 });
 
-app.post('/api/orders', authenticate, async (req: any, res: any) => {
+app.post('/api/orders', authenticate, async (req: express.Request, res: express.Response) => {
+    const authReq = req as AuthRequest;
     const { serviceId, details, description } = req.body;
     const service = await prisma.service.findUnique({ where: { id: serviceId } });
     if (!service) return res.status(400).json({ message: 'Serviço inválido' });
     
     const order = await prisma.order.create({
         data: { 
-            clientId: req.user.id, 
+            clientId: authReq.user.id, 
             serviceId, 
             details: details || {}, 
             description, 
@@ -203,13 +209,14 @@ app.post('/api/orders', authenticate, async (req: any, res: any) => {
     res.status(201).json(order);
 });
 
-app.post('/api/orders/:id/upload', authenticate, upload.single('file') as any, async (req: any, res: any) => {
-    if (!req.file) return res.status(400).json({ message: 'Arquivo ausente' });
+app.post('/api/orders/:id/upload', authenticate, upload.single('file') as any, async (req: express.Request, res: express.Response) => {
+    const authReq = req as AuthRequest;
+    if (!authReq.file) return res.status(400).json({ message: 'Arquivo ausente' });
     
     try {
-        const publicUrl = await uploadFileToS3(req.file, `orders/${req.params.id}`);
+        const publicUrl = await uploadFileToS3(authReq.file, `orders/${req.params.id}`);
         const doc = await prisma.document.create({
-            data: { orderId: req.params.id, name: req.file.originalname, mimeType: req.file.mimetype, size: req.file.size, s3Key: publicUrl }
+            data: { orderId: req.params.id, name: authReq.file.originalname, mimeType: authReq.file.mimetype, size: authReq.file.size, s3Key: publicUrl }
         });
         res.status(201).json(doc);
     } catch (error) {
@@ -218,7 +225,7 @@ app.post('/api/orders/:id/upload', authenticate, upload.single('file') as any, a
 });
 
 // Webhook MP
-app.post('/api/webhooks/mp', async (req: any, res: any) => {
+app.post('/api/webhooks/mp', async (req: express.Request, res: express.Response) => {
     console.log("Webhook MP recebido:", req.body);
     res.sendStatus(200);
 });
