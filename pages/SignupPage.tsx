@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../App';
 import { Page } from '../types';
@@ -13,7 +12,7 @@ const SignupPage: React.FC = () => {
     const [cpf, setCpf] = useState('');
     const [birthDate, setBirthDate] = useState('');
     const [address, setAddress] = useState('');
-    const [phone, setPhone] = useState(''); // Novo estado para telefone
+    const [phone, setPhone] = useState('');
     const [agreedToPolicy, setAgreedToPolicy] = useState(false);
     const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
@@ -70,7 +69,7 @@ const SignupPage: React.FC = () => {
             return;
         }
         setIsLoading(true);
-        await registerUser(name, email, cpf, birthDate, address, phone);
+        await registerUser(name, email, cpf, birthDate, address, phone, password); // Passando senha!
         setIsLoading(false);
     };
 
