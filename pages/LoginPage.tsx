@@ -4,20 +4,17 @@ import { useAuth } from '../App';
 import { Page, Role } from '../types';
 import LoadingSpinner from '../components/LoadingSpinner';
 
-// Declaração para as bibliotecas globais do Google e Apple
+// Declaração para as bibliotecas globais do Google
 declare global {
   const google: any;
-  const AppleID: any;
 }
 
-const AppleIcon = () => (
-    <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M18.71 19.5C17.88 20.74 17 21.95 15.66 21.97C14.32 22 13.89 21.18 12.37 21.18C10.84 21.18 10.37 21.95 9.09997 22C7.78997 22.05 6.79997 20.68 5.95997 19.47C4.24997 17 2.93997 12.45 4.69997 9.39C5.56997 7.87 7.12997 6.91 8.81997 6.88C10.1 6.86 11.32 7.75 12.11 7.75C12.89 7.75 14.37 6.68 15.92 6.84C16.57 6.87 18.39 7.1 19.56 8.82C19.47 8.88 17.39 10.1 17.41 12.63C17.44 15.65 20.06 16.66 20.09 16.67C20.06 16.74 19.67 18.11 18.71 19.5ZM13 3.5C13.73 2.67 14.94 2.04 15.94 2C16.07 3.17 15.6 4.35 14.9 5.19C14.21 6.04 13.07 6.7 11.95 6.61C11.8 5.46 12.36 4.26 13 3.5Z"></path>
-    </svg>
-);
+// IMPORTANTE: Substitua este valor pela chave que você gerou no painel
+// do Google Cloud Console.
+const GOOGLE_CLIENT_ID = "SEU_GOOGLE_CLIENT_ID_AQUI.apps.googleusercontent.com";
 
 const LoginPage: React.FC = () => {
-    const { login, loginWithGoogle, loginWithApple, setPage, addNotification } = useAuth();
+    const { login, loginWithGoogle, setPage, addNotification } = useAuth();
     const googleButtonRef = useRef<HTMLDivElement>(null);
     
     const [email, setEmail] = useState('');
@@ -38,29 +35,12 @@ const LoginPage: React.FC = () => {
         setIsSocialLoading(false);
     };
 
-    const handleAppleSignIn = async () => {
-        try {
-            if (typeof AppleID !== 'undefined') {
-                setIsSocialLoading(true);
-                const data = await AppleID.auth.signIn();
-                await loginWithApple(data.authorization.id_token);
-            } else {
-                 addNotification("Apple Sign In não está disponível no momento.", 'error');
-            }
-        } catch (error) {
-            console.error("Erro no login com a Apple:", error);
-            addNotification("Ocorreu um erro durante o login com a Apple.", 'error');
-        } finally {
-            setIsSocialLoading(false);
-        }
-    };
-
     useEffect(() => {
         const initializeGoogle = () => {
             if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
                 try {
                     google.accounts.id.initialize({
-                        client_id: "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com",
+                        client_id: GOOGLE_CLIENT_ID,
                         callback: handleGoogleSignIn,
                         auto_select: false,
                         cancel_on_tap_outside: true
@@ -74,27 +54,11 @@ const LoginPage: React.FC = () => {
                     }
                 } catch (error) {
                     // Em ambientes de sandbox ou iframes restritos, o Google Auth pode falhar.
-                    // Capturamos o erro silenciosamente para não quebrar a página inteira.
-                    console.warn("Google Sign-In falhou ao inicializar (provável ambiente de teste/sandbox):", error);
+                    console.warn("Google Sign-In falhou ao inicializar:", error);
                 }
             }
         };
 
-        // --- Configuração da Apple ---
-        if (typeof AppleID !== 'undefined') {
-            try {
-                AppleID.auth.init({
-                    clientId : 'br.com.edari.signin',
-                    scope : 'name email',
-                    redirectURI : window.location.origin,
-                    usePopup : true
-                });
-            } catch (e) {
-                console.warn("Apple ID init failed", e);
-            }
-        }
-
-        // Add delay to ensure DOM is ready and script is loaded
         const timer = setTimeout(initializeGoogle, 500);
         return () => clearTimeout(timer);
     }, []);
@@ -136,17 +100,6 @@ const LoginPage: React.FC = () => {
                         
                         {/* Botão Google */}
                         <div ref={googleButtonRef} className="h-[40px] w-[300px] flex justify-center min-h-[40px]"></div>
-                        
-                        {/* Botão Apple */}
-                        <button
-                            type="button"
-                            onClick={handleAppleSignIn}
-                            className="mt-3 w-[300px] bg-black text-white font-semibold py-2 px-4 rounded-lg flex items-center justify-center hover:bg-gray-800 transition-colors"
-                            disabled={isLoading || isSocialLoading}
-                        >
-                            <AppleIcon />
-                            Entrar com a Apple
-                        </button>
                     </div>
                     
                     <p className="text-center text-sm text-slate-600 mt-8">

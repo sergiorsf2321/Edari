@@ -1,3 +1,4 @@
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 
@@ -24,17 +25,18 @@ async function main() {
     });
   }
 
-  const passwordHash = await bcrypt.hash('$ergi0F1lh0..J0yC3', 10);
+  // Gera o hash para a senha 'admin123'
+  const passwordHash = await bcrypt.hash('admin123', 10);
   
   // Criação do Admin
   await prisma.user.upsert({
-    where: { email: 'edari.docs@gmaail.com' },
+    where: { email: 'edari.docs@gmail.com' },
     update: {},
     create: {
       email: 'edari.docs@gmail.com',
       name: 'Super Admin',
       role: 'ADMIN',
-      passwordHash,
+      passwordHash: passwordHash, // Usa o hash correto para a senha 'admin123'
       isVerified: true,
       phone: '85996231572',
       cpf: '068.263.473-50',

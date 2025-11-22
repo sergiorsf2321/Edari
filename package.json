@@ -1,37 +1,24 @@
 {
-  "name": "edari---análise-documental-imobiliária",
+  "name": "edari-frontend",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^18.2.0",
-    "react": "^18.2.0",
-    "recharts": "2.12.7",
     "lucide-react": "^0.395.0",
-    "express": "^5.1.0",
-    "jsonwebtoken": "^9.0.2",
-    "cors": "^2.8.5",
-    "process": "^0.11.10",
-    "zod": "^4.1.12",
-    "@prisma/client": "^7.0.0",
-    "bcryptjs": "^3.0.3",
-    "multer": "^2.0.2",
-    "@aws-sdk/client-s3": "^3.937.0",
-    "axios": "^1.13.2",
-    "@aws-sdk/client-ses": "^3.936.0",
-    "mercadopago": "^2.10.0",
-    "express-rate-limit": "^8.2.1",
-    "helmet": "^8.1.0"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "recharts": "^2.12.7"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "typescript": "^5.2.2",
+    "vite": "^5.2.0"
   }
 }

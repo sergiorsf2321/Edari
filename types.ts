@@ -116,7 +116,6 @@ export interface AuthContextType {
   page: Page;
   setPage: (page: Page) => void;
   loginWithGoogle: (googleToken: string) => Promise<void>;
-  loginWithApple: (appleToken: string) => Promise<void>;
   orders: Order[];
   selectedOrder: Order | null;
   setSelectedOrder: (order: Order | null) => void;

@@ -151,17 +151,6 @@ const App: React.FC = () => {
             addNotification("Login com Google falhou.", 'error');
         }
     }, [addNotification]);
-    
-    const loginWithApple = useCallback(async (appleToken: string) => {
-        try {
-            const loggedUser = await AuthService.socialLogin('apple', appleToken);
-            setUser(loggedUser);
-            setPage(Page.Dashboard);
-            addNotification(`Login com Apple sucesso!`, 'success');
-        } catch (error) {
-            addNotification("Login com Apple falhou.", 'error');
-        }
-    }, [addNotification]);
 
     const updateOrder = useCallback(async (orderData: Order) => {
         try {
@@ -214,7 +203,7 @@ const App: React.FC = () => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, registerUser, verifyUser, logout, page, setPage, loginWithGoogle, loginWithApple, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder, lastRegisteredEmail, addNotification, updateUserProfile }}>
+        <AuthContext.Provider value={{ user, login, registerUser, verifyUser, logout, page, setPage, loginWithGoogle, orders, selectedOrder, setSelectedOrder, updateOrder, addOrder, lastRegisteredEmail, addNotification, updateUserProfile }}>
             <div className="bg-brand-light min-h-screen flex flex-col font-sans text-slate-800">
                 <NotificationContainer notifications={notifications} removeNotification={removeNotification} />
                 <Header />
