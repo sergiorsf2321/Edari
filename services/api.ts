@@ -1,31 +1,20 @@
+import { AuthContextType } from "../types";
+
+// --- CONFIGURAÇÃO DE CONEXÃO ---
+// Se você estiver rodando local, usa localhost. Se estiver no Render, usa a URL de produção.
 const PROD_API_URL = 'https://edari-api.onrender.com/api'; 
 
 export const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000/api'
   : PROD_API_URL;
 
-const getAuthHeaders = (): Record<string, string> => {
+const getAuthHeaders = () => {
   const token = localStorage.getItem('edari_token');
-  const headers: Record<string, string> = {
+  return {
     'Content-Type': 'application/json',
+    'Authorization': token ? `Bearer ${token}` : '',
   };
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-  return headers;
 };
-
-export class ApiError extends Error {
-  code?: string;
-  status: number;
-  
-  constructor(message: string, status: number, code?: string) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.code = code;
-  }
-}
 
 export const apiRequest = async <T>(endpoint: string, options: RequestInit = {}): Promise<T> => {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -34,38 +23,36 @@ export const apiRequest = async <T>(endpoint: string, options: RequestInit = {})
   try {
     const response = await fetch(url, { ...options, headers });
 
-    let errorBody: any = {};
-    if (!response.ok) {
-      try {
-        errorBody = await response.json();
-      } catch {
-        errorBody = { message: `Erro ${response.status}` };
-      }
-    }
-
+    // Tratamento de Erro 401 (Não Autorizado)
     if (response.status === 401) {
-      if (endpoint.includes('/auth/login') || endpoint.includes('/auth/social') || endpoint.includes('/auth/register')) {
-        throw new ApiError(errorBody.message || 'Credenciais inválidas.', 401, errorBody.code);
+      // CASO 1: Tentativa de Login (Não deve deslogar, apenas avisar erro de senha)
+      if (endpoint.includes('/auth/login') || endpoint.includes('/auth/social')) {
+         const errorBody = await response.json().catch(() => ({}));
+         throw new Error(errorBody.message || 'Credenciais inválidas.');
       }
+
+      // CASO 2: Token expirado em rotas protegidas (Desloga o usuário)
       localStorage.removeItem('edari_token');
       localStorage.removeItem('edari_user_id');
-      throw new ApiError('Sessão expirada. Por favor, faça login novamente.', 401, 'SESSION_EXPIRED');
-    }
-
-    if (response.status === 403) {
-      throw new ApiError(errorBody.message || 'Acesso negado.', 403, errorBody.code);
+      
+      const currentPath = window.location.pathname;
+      // Evita loop de reload na home ou login
+      if (currentPath !== '/' && !currentPath.includes('login') && !currentPath.includes('cadastro')) {
+         window.location.href = '/login'; 
+      }
+      throw new Error('Sessão expirada. Faça login novamente.');
     }
 
     if (!response.ok) {
-      throw new ApiError(errorBody.message || `Erro na requisição: ${response.status}`, response.status, errorBody.code);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Erro na requisição: ${response.status}`);
     }
 
     if (response.status === 204) return {} as T;
     return await response.json();
   } catch (error) {
-    if (error instanceof ApiError) throw error;
     console.error(`API Error [${endpoint}]:`, error);
-    throw new ApiError('Erro de conexão com o servidor.', 0, 'NETWORK_ERROR');
+    throw error;
   }
 };
 
@@ -76,22 +63,19 @@ export const apiUpload = async <T>(endpoint: string, formData: FormData): Promis
   try {
     const response = await fetch(url, {
       method: 'POST',
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+      headers: { 'Authorization': token ? `Bearer ${token}` : '' },
       body: formData
     });
 
     if (response.status === 401) {
-      localStorage.removeItem('edari_token');
-      throw new ApiError('Sessão expirada.', 401);
+       localStorage.removeItem('edari_token');
+       throw new Error('Sessão expirada. Faça login novamente.');
     }
 
-    if (!response.ok) {
-      const errorBody = await response.json().catch(() => ({}));
-      throw new ApiError(errorBody.message || `Erro no upload: ${response.status}`, response.status);
-    }
+    if (!response.ok) throw new Error(`Erro no upload: ${response.status}`);
     return await response.json();
   } catch (error) {
-    if (error instanceof ApiError) throw error;
-    throw new ApiError('Erro ao fazer upload.', 0);
+    console.error(`Upload Error [${endpoint}]:`, error);
+    throw error;
   }
 };
