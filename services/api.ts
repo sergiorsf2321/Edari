@@ -1,14 +1,8 @@
-
 import { AuthContextType } from "../types";
 
 // --- CONFIGURAÇÃO DE CONEXÃO ---
-// Aqui definimos o endereço do seu servidor no Render.
-// Mantemos o '/api' no final para que as rotas funcionem corretamente.
 const PROD_API_URL = 'https://edari-api.onrender.com/api'; 
 
-// Lógica automática:
-// Se estiver rodando no seu computador (localhost), usa o backend local.
-// Se estiver publicado (Vercel/Netlify), usa o backend do Render.
 export const API_BASE_URL = window.location.hostname === 'localhost'
   ? 'http://localhost:3000/api'
   : PROD_API_URL;
@@ -29,12 +23,16 @@ export const apiRequest = async <T>(endpoint: string, options: RequestInit = {})
     const response = await fetch(url, { ...options, headers });
 
     if (response.status === 401) {
-      // Se o token venceu ou é inválido, desloga o usuário
+      // IMPORTANTE: Se for a rota /auth/me, não redirecionar
+      // Isso evita o loop de redirecionamento
+      if (endpoint === '/auth/me') {
+        throw new Error('Token inválido ou expirado');
+      }
+      
+      // Para outras rotas, limpar o token e redirecionar apenas se necessário
       localStorage.removeItem('edari_token');
       localStorage.removeItem('edari_user_id');
       
-      // Redireciona APENAS se o usuário estiver tentando acessar uma área protegida
-      // ou se a URL atual não for a home/login. Isso evita o loop.
       const currentPath = window.location.pathname;
       if (currentPath !== '/' && !currentPath.includes('login') && !currentPath.includes('cadastro')) {
          window.location.href = '/'; 
@@ -48,7 +46,12 @@ export const apiRequest = async <T>(endpoint: string, options: RequestInit = {})
     }
 
     if (response.status === 204) return {} as T;
-    return await response.json();
+    
+    const data = await response.json();
+    
+    // IMPORTANTE: O backend está retornando { data: { ... } }
+    // Precisamos extrair o conteúdo de dentro de 'data'
+    return data.data || data;
   } catch (error) {
     console.error(`API Error [${endpoint}]:`, error);
     throw error;
@@ -72,7 +75,9 @@ export const apiUpload = async <T>(endpoint: string, formData: FormData): Promis
     }
 
     if (!response.ok) throw new Error(`Erro no upload: ${response.status}`);
-    return await response.json();
+    
+    const data = await response.json();
+    return data.data || data;
   } catch (error) {
     console.error(`Upload Error [${endpoint}]:`, error);
     throw error;
