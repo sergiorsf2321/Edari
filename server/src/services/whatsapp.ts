@@ -5,7 +5,7 @@ export const sendWhatsAppMessage = async (phone: string, templateName: string, p
   const phoneId = process.env.WHATSAPP_PHONE_ID;
 
   if (!token || !phoneId || !phone) {
-      console.log(`[SIMULAÇÃO WHATSAPP] Para: ${phone} | Template: ${templateName}`);
+      console.log(`[WhatsApp Simulado] Para: ${phone} | Template: ${templateName}`);
       return;
   }
 
@@ -31,9 +31,13 @@ export const sendWhatsAppMessage = async (phone: string, templateName: string, p
   };
 
   try {
-    await axios.post(url, body, { headers: { Authorization: `Bearer ${token}` } });
-    console.log(`[WhatsApp] Mensagem enviada para ${cleanPhone}`);
+    await axios.post(url, body, { 
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 5000
+    });
+    console.log(`[WhatsApp Success] Mensagem enviada para ${cleanPhone}`);
   } catch (error: any) {
-    console.error("[WhatsApp] Erro:", error.response?.data || error.message);
+    const apiError = error.response?.data?.error?.message || error.message;
+    console.error(`[WhatsApp Error] Falha no envio: ${apiError}`);
   }
 };

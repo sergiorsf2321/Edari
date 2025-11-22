@@ -9,13 +9,13 @@ const sesClient = new SESClient({
 });
 
 export const sendEmail = async (to: string, subject: string, htmlBody: string) => {
-  if (!process.env.AWS_ACCESS_KEY_ID) {
-      console.log(`[SIMULAÇÃO EMAIL] Para: ${to} | Assunto: ${subject}`);
+  if (!process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
+      console.log(`[Email Simulado] Para: ${to} | Assunto: ${subject}`);
       return;
   }
 
   const command = new SendEmailCommand({
-    Source: "Edari <edari.docs@gmail.com>", 
+    Source: "Edari <edari.docs@gmail.com>",
     Destination: { ToAddresses: [to] },
     Message: {
       Subject: { Data: subject },
@@ -25,8 +25,8 @@ export const sendEmail = async (to: string, subject: string, htmlBody: string) =
 
   try {
     await sesClient.send(command);
-    console.log(`[SES] Email enviado para ${to}`);
-  } catch (error) {
-    console.error("[SES] Erro:", error);
+    console.log(`[SES Success] Email enviado para ${to}`);
+  } catch (error: any) {
+    console.error(`[SES Error] Falha ao enviar email para ${to}:`, error.message);
   }
 };
